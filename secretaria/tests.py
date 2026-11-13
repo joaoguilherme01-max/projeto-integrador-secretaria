@@ -735,3 +735,78 @@ class EdicaoCompletaDemandaTestCase(TestCase):
         self.assertIn('Prazo:', historico.observacao)
         self.assertIn('Descrição da demanda atualizada', historico.observacao)
         self.assertIn('Demanda priorizada a pedido da coordenação', historico.observacao)
+
+
+
+class AuditoriaMudancasTestCase(TestCase):
+    def setUp(self):
+        self.servidor = User.objects.create_user(
+            username='auditor_teste', password='123', first_name='Patrícia', last_name='Alves'
+        )
+        PerfilUsuario.objects.create(user=self.servidor, perfil='ATENDENTE')
+        self.cat = Categoria.objects.create(nome='Certidão Escolar')
+
+        self.demanda = Demanda.objects.create(
+            categoria=self.cat,
+            solicitante='Vinícius Santos',
+            contato='11955554444',
+            descricao='Emissão de certidão de conclusão.',
+            status='RECEBIDA',
+            prioridade='MEDIA',
+            responsavel=self.servidor,
+            prazo=timezone.now().date() + timedelta(days=4)
+        )
+
+    def test_auditoria_completa_mudanca_status(self):
+        """
+        Garante que todos os 5 itens do checklist de auditoria sejam gravados:
+        1. Usuário responsável pela alteração
+        2. Data e horário (DateTimeField com auto_now_add)
+        3. Status anterior
+        4. Novo status
+        5. Observações
+        """
+        self.client.force_login(self.servidor)
+        url = reverse('secretaria:editar_demanda', args=[self.demanda.protocolo])
+
+        tempo_antes = timezone.now() - timedelta(seconds=2)
+
+        dados = {
+            'solicitante': 'Vinícius Santos',
+            'contato': '11955554444',
+            'categoria': str(self.cat.id),
+            'descricao': 'Emissão de certidão de conclusão.',
+            'prioridade': 'ALTA',
+            'status': 'EM_ANDAMENTO',
+            'responsavel': str(self.servidor.id),
+            'prazo': self.demanda.prazo.strftime('%Y-%m-%d'),
+            'observacao_alteracao': 'Documentação conferida no arquivo geral; processo iniciado.',
+            'resultado': '',
+        }
+
+        response = self.client.post(url, dados)
+        self.assertEqual(response.status_code, 302)
+
+        self.demanda.refresh_from_db()
+        self.assertEqual(self.demanda.status, 'EM_ANDAMENTO')
+
+        # Recupera o registro gerado no histórico
+        historico = self.demanda.historicos.first()
+        self.assertIsNotNone(historico)
+
+        # 1. Usuário responsável pela alteração
+        self.assertEqual(historico.usuario, self.servidor)
+        self.assertEqual(historico.usuario.get_full_name(), 'Patrícia Alves')
+
+        # 2. Data e horário registrados
+        self.assertGreaterEqual(historico.data_alteracao, tempo_antes)
+        self.assertLessEqual(historico.data_alteracao, timezone.now() + timedelta(seconds=2))
+
+        # 3. Status anterior
+        self.assertEqual(historico.etapa_anterior, 'Recebida')
+
+        # 4. Novo status
+        self.assertEqual(historico.nova_etapa, 'Em Andamento')
+
+        # 5. Salvar observações
+        self.assertIn('Documentação conferida no arquivo geral; processo iniciado.', historico.observacao)
