@@ -663,3 +663,75 @@ class ProtocoloUnicoTestCase(TestCase):
 
         with self.assertRaises(IntegrityError):
             demanda_duplicada.save()
+
+
+
+class EdicaoCompletaDemandaTestCase(TestCase):
+    def setUp(self):
+        self.user_editor = User.objects.create_user(username='editor_user', password='123', first_name='Gabriel')
+        PerfilUsuario.objects.create(user=self.user_editor, perfil='GESTOR')
+
+        self.user_novo_resp = User.objects.create_user(username='resp_novo', password='123', first_name='Camila')
+        PerfilUsuario.objects.create(user=self.user_novo_resp, perfil='ATENDENTE')
+
+        self.cat = Categoria.objects.create(nome='Declaração de Conclusão')
+        hoje = timezone.now().date()
+        self.demanda = Demanda.objects.create(
+            categoria=self.cat,
+            solicitante='Matheus Oliveira',
+            contato='11988889999',
+            descricao='Descrição inicial da demanda.',
+            prioridade='BAIXA',
+            status='RECEBIDA',
+            responsavel=None,
+            prazo=hoje + timedelta(days=10)
+        )
+
+    def test_editar_descricao_responsavel_prioridade_prazo(self):
+        """
+        Testa edição de descrição, responsável, prioridade e prazo com
+        geração detalhada no histórico de auditoria.
+        """
+        self.client.force_login(self.user_editor)
+        novo_prazo = (timezone.now().date() + timedelta(days=2)).strftime('%Y-%m-%d')
+
+        dados = {
+            'solicitante': 'Matheus Oliveira',
+            'contato': '11988889999',
+            'categoria': str(self.cat.id),
+            'descricao': 'Descrição atualizada com detalhes adicionais do requerimento.',
+            'prioridade': 'URGENTE',
+            'status': 'EM_ANDAMENTO',
+            'responsavel': str(self.user_novo_resp.id),
+            'prazo': novo_prazo,
+            'observacao_alteracao': 'Demanda priorizada a pedido da coordenação.',
+            'resultado': '',
+        }
+
+        url = reverse('secretaria:editar_demanda', args=[self.demanda.protocolo])
+        response = self.client.post(url, dados)
+        self.assertEqual(response.status_code, 302)
+
+        self.demanda.refresh_from_db()
+
+        # 1. Editar descrição
+        self.assertEqual(self.demanda.descricao, 'Descrição atualizada com detalhes adicionais do requerimento.')
+
+        # 2. Alterar responsável
+        self.assertEqual(self.demanda.responsavel, self.user_novo_resp)
+
+        # 3. Atualizar prioridade
+        self.assertEqual(self.demanda.prioridade, 'URGENTE')
+
+        # 4. Atualizar prazo
+        self.assertEqual(self.demanda.prazo.strftime('%Y-%m-%d'), novo_prazo)
+
+        # Verificar se o histórico de auditoria registrou todas as alterações
+        historico = self.demanda.historicos.first()
+        self.assertIsNotNone(historico)
+        self.assertEqual(historico.usuario, self.user_editor)
+        self.assertIn('Prioridade:', historico.observacao)
+        self.assertIn('Responsável:', historico.observacao)
+        self.assertIn('Prazo:', historico.observacao)
+        self.assertIn('Descrição da demanda atualizada', historico.observacao)
+        self.assertIn('Demanda priorizada a pedido da coordenação', historico.observacao)

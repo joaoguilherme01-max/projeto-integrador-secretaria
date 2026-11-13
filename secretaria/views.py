@@ -219,6 +219,9 @@ def editar_demanda(request, protocolo):
     demanda = get_object_or_404(Demanda, protocolo=protocolo)
     status_anterior = demanda.status
     responsavel_anterior = demanda.responsavel
+    prioridade_anterior = demanda.prioridade
+    prazo_anterior = demanda.prazo
+    descricao_anterior = demanda.descricao
 
     if request.method == 'POST':
         form = EditarDemandaForm(request.POST, instance=demanda)
@@ -234,24 +237,44 @@ def editar_demanda(request, protocolo):
 
             demanda_atualizada.save()
 
-            # Cria histórico se houve mudança de status, responsável ou se uma observação foi inserida
+            # Detecta alterações nos campos monitorados
             mudou_status = (status_anterior != demanda_atualizada.status)
             mudou_responsavel = (responsavel_anterior != demanda_atualizada.responsavel)
+            mudou_prioridade = (prioridade_anterior != demanda_atualizada.prioridade)
+            mudou_prazo = (prazo_anterior != demanda_atualizada.prazo)
+            mudou_descricao = (descricao_anterior != demanda_atualizada.descricao)
 
-            if mudou_status or mudou_responsavel or observacao:
+            houve_alteracao = any([
+                mudou_status, mudou_responsavel, mudou_prioridade,
+                mudou_prazo, mudou_descricao, bool(observacao)
+            ])
+
+            if houve_alteracao:
                 desc_status_ant = dict(Demanda.STATUS_CHOICES).get(status_anterior, status_anterior)
                 desc_status_novo = demanda_atualizada.get_status_display()
                 
-                obs_final = observacao
-                if not obs_final:
-                    detalhes = []
-                    if mudou_status:
-                        detalhes.append(f"Status alterado de '{desc_status_ant}' para '{desc_status_novo}'")
-                    if mudou_responsavel:
-                        ant_nome = responsavel_anterior.get_full_name() or responsavel_anterior.username if responsavel_anterior else "Não atribuído"
-                        novo_nome = demanda_atualizada.responsavel.get_full_name() or demanda_atualizada.responsavel.username if demanda_atualizada.responsavel else "Não atribuído"
-                        detalhes.append(f"Responsável alterado de '{ant_nome}' para '{novo_nome}'")
-                    obs_final = ". ".join(detalhes)
+                detalhes = []
+                if mudou_status:
+                    detalhes.append(f"Status: '{desc_status_ant}' ➔ '{desc_status_novo}'")
+                if mudou_responsavel:
+                    ant_nome = responsavel_anterior.get_full_name() or responsavel_anterior.username if responsavel_anterior else "Não atribuído"
+                    novo_nome = demanda_atualizada.responsavel.get_full_name() or demanda_atualizada.responsavel.username if demanda_atualizada.responsavel else "Não atribuído"
+                    detalhes.append(f"Responsável: '{ant_nome}' ➔ '{novo_nome}'")
+                if mudou_prioridade:
+                    ant_prio = dict(Demanda.PRIORIDADE_CHOICES).get(prioridade_anterior, prioridade_anterior)
+                    detalhes.append(f"Prioridade: '{ant_prio}' ➔ '{demanda_atualizada.get_prioridade_display()}'")
+                if mudou_prazo:
+                    p_ant = prazo_anterior.strftime('%d/%m/%Y') if prazo_anterior else "Sem prazo"
+                    p_novo = demanda_atualizada.prazo.strftime('%d/%m/%Y') if demanda_atualizada.prazo else "Sem prazo"
+                    detalhes.append(f"Prazo: '{p_ant}' ➔ '{p_novo}'")
+                if mudou_descricao:
+                    detalhes.append("Descrição da demanda atualizada")
+                
+                resumo_mudancas = "; ".join(detalhes)
+                if observacao:
+                    obs_final = f"{resumo_mudancas}. Observação: {observacao}" if resumo_mudancas else observacao
+                else:
+                    obs_final = resumo_mudancas or "Atualização realizada."
 
                 Historico.objects.create(
                     demanda=demanda_atualizada,
