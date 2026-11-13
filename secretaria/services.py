@@ -99,3 +99,79 @@ def obter_indicadores_gestao():
         'distribuicao_por_responsavel': distribuicao_por_responsavel,
     }
 
+
+
+
+def listar_demandas_filtradas(filtros):
+    """
+    Filtra as demandas de acordo com os critérios informados:
+    - status
+    - responsavel (id do usuário ou 'sem_responsavel')
+    - categoria (id da categoria)
+    - prioridade
+    - periodo (data_inicio e data_fim na data_entrada)
+    - termo de busca (protocolo, solicitante ou contato)
+    """
+    from django.db.models import Q
+    from datetime import datetime
+
+    qs = Demanda.objects.select_related('categoria', 'responsavel').all()
+
+    # Pesquisar protocolo ou solicitante
+    busca = filtros.get('busca')
+    if busca:
+        busca = busca.strip()
+        qs = qs.filter(
+            Q(protocolo__icontains=busca) |
+            Q(solicitante__icontains=busca) |
+            Q(contato__icontains=busca) |
+            Q(descricao__icontains=busca)
+        )
+
+    # Filtrar por status
+    status = filtros.get('status')
+    if status:
+        qs = qs.filter(status=status)
+
+    # Filtrar por responsável
+    responsavel = filtros.get('responsavel')
+    if responsavel:
+        if responsavel == 'sem_responsavel':
+            qs = qs.filter(responsavel__isnull=True)
+        else:
+            try:
+                qs = qs.filter(responsavel_id=int(responsavel))
+            except (ValueError, TypeError):
+                pass
+
+    # Filtrar por categoria
+    categoria = filtros.get('categoria')
+    if categoria:
+        try:
+            qs = qs.filter(categoria_id=int(categoria))
+        except (ValueError, TypeError):
+            pass
+
+    # Filtrar por prioridade
+    prioridade = filtros.get('prioridade')
+    if prioridade:
+        qs = qs.filter(prioridade=prioridade)
+
+    # Filtrar por período (data_inicio e data_fim)
+    data_inicio = filtros.get('data_inicio')
+    if data_inicio:
+        try:
+            dt_ini = datetime.strptime(data_inicio, '%Y-%m-%d').date()
+            qs = qs.filter(data_entrada__date__gte=dt_ini)
+        except (ValueError, TypeError):
+            pass
+
+    data_fim = filtros.get('data_fim')
+    if data_fim:
+        try:
+            dt_fim = datetime.strptime(data_fim, '%Y-%m-%d').date()
+            qs = qs.filter(data_entrada__date__lte=dt_fim)
+        except (ValueError, TypeError):
+            pass
+
+    return qs.order_by('-data_entrada')

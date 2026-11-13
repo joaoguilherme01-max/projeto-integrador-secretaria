@@ -120,7 +120,7 @@ class ModelosSecretariaTestCase(TestCase):
         self.assertEqual(demanda.anexos.first().nome_arquivo, 'comprovante.pdf')
 
 
-from secretaria.services import obter_indicadores_gestao
+from secretaria.services import obter_indicadores_gestao, listar_demandas_filtradas
 from django.urls import reverse
 
 
@@ -211,3 +211,108 @@ class IndicadoresGestaoTestCase(TestCase):
         json_data = response.json()
         self.assertEqual(json_data['total_abertas'], 2)
         self.assertEqual(json_data['total_atrasadas'], 1)
+
+
+
+class FiltrosLocalizacaoTestCase(TestCase):
+    def setUp(self):
+        self.user1 = User.objects.create_user(username='mariana', first_name='Mariana', password='123')
+        self.user2 = User.objects.create_user(username='roberto', first_name='Roberto', password='123')
+
+        self.cat1 = Categoria.objects.create(nome='Declaração')
+        self.cat2 = Categoria.objects.create(nome='Histórico')
+
+        hoje = timezone.now().date()
+        agora = timezone.now()
+
+        # Demanda 1
+        d1 = Demanda.objects.create(
+            categoria=self.cat1,
+            solicitante='Fernanda Lima',
+            contato='1199999999',
+            descricao='Declaração de conclusão',
+            status='RECEBIDA',
+            prioridade='URGENTE',
+            responsavel=self.user1,
+            prazo=hoje + timedelta(days=1)
+        )
+        Demanda.objects.filter(id=d1.id).update(data_entrada=agora - timedelta(days=10))
+
+        # Demanda 2
+        d2 = Demanda.objects.create(
+            categoria=self.cat2,
+            solicitante='Gabriel Ramos',
+            contato='gabriel@escola.com',
+            descricao='Segunda via histórico escolar',
+            status='EM_ANDAMENTO',
+            prioridade='BAIXA',
+            responsavel=self.user2,
+            prazo=hoje + timedelta(days=15)
+        )
+        Demanda.objects.filter(id=d2.id).update(data_entrada=agora - timedelta(days=2))
+
+        # Demanda 3 (sem responsável)
+        d3 = Demanda.objects.create(
+            categoria=self.cat1,
+            solicitante='Lucas Ferreira',
+            contato='lucas@escola.com',
+            descricao='Atendimento geral de dúvidas',
+            status='TRIAGEM',
+            prioridade='MEDIA',
+            responsavel=None,
+            prazo=hoje + timedelta(days=3)
+        )
+        Demanda.objects.filter(id=d3.id).update(data_entrada=agora)
+
+        self.d1 = Demanda.objects.get(id=d1.id)
+        self.d2 = Demanda.objects.get(id=d2.id)
+        self.d3 = Demanda.objects.get(id=d3.id)
+
+    def test_pesquisar_protocolo(self):
+        res = listar_demandas_filtradas({'busca': self.d1.protocolo})
+        self.assertEqual(res.count(), 1)
+        self.assertEqual(res.first().protocolo, self.d1.protocolo)
+
+    def test_filtrar_por_status(self):
+        res = listar_demandas_filtradas({'status': 'EM_ANDAMENTO'})
+        self.assertEqual(res.count(), 1)
+        self.assertEqual(res.first().protocolo, self.d2.protocolo)
+
+    def test_filtrar_por_responsavel(self):
+        res = listar_demandas_filtradas({'responsavel': str(self.user1.id)})
+        self.assertEqual(res.count(), 1)
+        self.assertEqual(res.first().protocolo, self.d1.protocolo)
+
+        res_sem_resp = listar_demandas_filtradas({'responsavel': 'sem_responsavel'})
+        self.assertEqual(res_sem_resp.count(), 1)
+        self.assertEqual(res_sem_resp.first().protocolo, self.d3.protocolo)
+
+    def test_filtrar_por_categoria(self):
+        res = listar_demandas_filtradas({'categoria': str(self.cat2.id)})
+        self.assertEqual(res.count(), 1)
+        self.assertEqual(res.first().protocolo, self.d2.protocolo)
+
+    def test_filtrar_por_prioridade(self):
+        res = listar_demandas_filtradas({'prioridade': 'URGENTE'})
+        self.assertEqual(res.count(), 1)
+        self.assertEqual(res.first().protocolo, self.d1.protocolo)
+
+    def test_filtrar_por_periodo(self):
+        hoje = timezone.now().date()
+        dt_ini = (hoje - timedelta(days=3)).strftime('%Y-%m-%d')
+        dt_fim = hoje.strftime('%Y-%m-%d')
+
+        res = listar_demandas_filtradas({'data_inicio': dt_ini, 'data_fim': dt_fim})
+        # d2 (2 dias atras) e d3 (hoje) devem estar presentes; d1 (10 dias atrás) não deve
+        self.assertEqual(res.count(), 2)
+        protocolos = list(res.values_list('protocolo', flat=True))
+        self.assertIn(self.d2.protocolo, protocolos)
+        self.assertIn(self.d3.protocolo, protocolos)
+        self.assertNotIn(self.d1.protocolo, protocolos)
+
+    def test_view_lista_demandas(self):
+        url = reverse('secretaria:lista_demandas')
+        response = self.client.get(url, {'busca': 'Fernanda'})
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, self.d1.protocolo)
+        self.assertNotContains(response, self.d2.protocolo)
