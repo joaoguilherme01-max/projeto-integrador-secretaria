@@ -28,18 +28,41 @@
             <a class="navbar-brand fw-bold" href="{% url 'secretaria:lista_demandas' %}">
                 <i class="bi bi-mortarboard-fill me-2"></i>Secretaria Escolar
             </a>
-            <div class="d-flex gap-2">
+            <div class="d-flex align-items-center gap-3">
                 <a href="{% url 'secretaria:lista_demandas' %}" class="btn btn-outline-light active btn-sm">
                     <i class="bi bi-search me-1"></i>Consultar Demandas
                 </a>
+                {% if request.user.is_superuser or perfil_usuario.perfil in 'ADMINISTRADOR,GESTOR' %}
                 <a href="{% url 'secretaria:dashboard' %}" class="btn btn-outline-light btn-sm">
                     <i class="bi bi-bar-chart-fill me-1"></i>Painel Gerencial
+                </a>
+                {% endif %}
+                <div class="vr bg-white opacity-50 d-none d-md-block"></div>
+                <div class="text-white small d-none d-md-block">
+                    <i class="bi bi-person-circle me-1"></i>
+                    <strong>{{ request.user.get_full_name|default:request.user.username }}</strong>
+                    {% if perfil_usuario %}
+                        <span class="badge bg-light text-primary ms-1">{{ perfil_usuario.get_perfil_display }}</span>
+                    {% elif request.user.is_superuser %}
+                        <span class="badge bg-warning text-dark ms-1">Superuser</span>
+                    {% endif %}
+                </div>
+                <a href="{% url 'secretaria:logout' %}" class="btn btn-sm btn-outline-warning" title="Sair do sistema">
+                    <i class="bi bi-box-arrow-right me-1"></i>Sair
                 </a>
             </div>
         </div>
     </nav>
 
     <div class="container-fluid px-4">
+        {% if messages %}
+            {% for message in messages %}
+                <div class="alert alert-{{ message.tags|default:'info' }} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            {% endfor %}
+        {% endif %}
         <!-- Cabeçalho -->
         <div class="d-flex justify-content-between align-items-center mb-3">
             <div>

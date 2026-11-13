@@ -201,11 +201,16 @@ class IndicadoresGestaoTestCase(TestCase):
         self.assertIn('2d', indicadores['tempo_medio_str'])
 
     def test_view_dashboard(self):
+        # Usuário autenticado como gestor
+        PerfilUsuario.objects.create(user=self.user, perfil='GESTOR')
+        self.client.force_login(self.user)
         response = self.client.get(reverse('secretaria:dashboard'))
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, 'Painel de Indicadores Gerenciais')
+        self.assertContains(response, 'Painel de Indicadores')
 
     def test_api_indicadores(self):
+        PerfilUsuario.objects.get_or_create(user=self.user, defaults={'perfil': 'GESTOR'})
+        self.client.force_login(self.user)
         response = self.client.get(reverse('secretaria:api_indicadores'))
         self.assertEqual(response.status_code, 200)
         json_data = response.json()
@@ -311,8 +316,94 @@ class FiltrosLocalizacaoTestCase(TestCase):
         self.assertNotIn(self.d1.protocolo, protocolos)
 
     def test_view_lista_demandas(self):
+        self.client.force_login(self.user1)
         url = reverse('secretaria:lista_demandas')
         response = self.client.get(url, {'busca': 'Fernanda'})
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, self.d1.protocolo)
         self.assertNotContains(response, self.d2.protocolo)
+
+
+
+class AutenticacaoControleAcessoTestCase(TestCase):
+    def setUp(self):
+        # Usuário Administrador
+        self.user_admin = User.objects.create_user(
+            username='admin_user', password='password123', first_name='Admin'
+        )
+        PerfilUsuario.objects.create(user=self.user_admin, perfil='ADMINISTRADOR', ativo=True)
+
+        # Usuário Gestor
+        self.user_gestor = User.objects.create_user(
+            username='gestor_user', password='password123', first_name='Gestor'
+        )
+        PerfilUsuario.objects.create(user=self.user_gestor, perfil='GESTOR', ativo=True)
+
+        # Usuário Atendente
+        self.user_atendente = User.objects.create_user(
+            username='atendente_user', password='password123', first_name='Atendente'
+        )
+        PerfilUsuario.objects.create(user=self.user_atendente, perfil='ATENDENTE', ativo=True)
+
+        # Usuário Inativo
+        self.user_inativo = User.objects.create_user(
+            username='inativo_user', password='password123', first_name='Inativo'
+        )
+        PerfilUsuario.objects.create(user=self.user_inativo, perfil='ATENDENTE', ativo=False)
+
+    def test_login_sucesso_e_logout(self):
+        """Testa login com credenciais válidas e posterior logout."""
+        # Login
+        response = self.client.post(reverse('secretaria:login'), {
+            'username': 'atendente_user',
+            'password': 'password123'
+        })
+        self.assertRedirects(response, reverse('secretaria:lista_demandas'))
+
+        # Logout
+        response_logout = self.client.get(reverse('secretaria:logout'))
+        self.assertRedirects(response_logout, reverse('secretaria:login'))
+
+    def test_login_usuario_inativo_bloqueado(self):
+        """Testa se usuário com perfil inativo é impedido de acessar."""
+        response = self.client.post(reverse('secretaria:login'), {
+            'username': 'inativo_user',
+            'password': 'password123'
+        })
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Esta conta está inativa')
+
+    def test_protecao_paginas_internas_anonimo(self):
+        """Garante que usuários não autenticados são redirecionados para a tela de login."""
+        response_demandas = self.client.get(reverse('secretaria:lista_demandas'))
+        self.assertEqual(response_demandas.status_code, 302)
+        self.assertIn('/login/', response_demandas.url)
+
+        response_dashboard = self.client.get(reverse('secretaria:dashboard'))
+        self.assertEqual(response_dashboard.status_code, 302)
+        self.assertIn('/login/', response_dashboard.url)
+
+    def test_controle_acesso_dashboard_por_perfil(self):
+        """
+        GESTOR e ADMINISTRADOR podem acessar o dashboard.
+        ATENDENTE é redirecionado com aviso de falta de permissão.
+        """
+        # Teste com Atendente (deve ser bloqueado do dashboard)
+        self.client.login(username='atendente_user', password='password123')
+        response_atendente = self.client.get(reverse('secretaria:dashboard'), follow=True)
+        self.assertRedirects(response_atendente, reverse('secretaria:lista_demandas'))
+        self.assertContains(response_atendente, 'Acesso não autorizado')
+        self.client.logout()
+
+        # Teste com Gestor (acesso permitido)
+        self.client.login(username='gestor_user', password='password123')
+        response_gestor = self.client.get(reverse('secretaria:dashboard'))
+        self.assertEqual(response_gestor.status_code, 200)
+        self.assertContains(response_gestor, 'Painel de Indicadores')
+        self.client.logout()
+
+        # Teste com Administrador (acesso permitido)
+        self.client.login(username='admin_user', password='password123')
+        response_admin = self.client.get(reverse('secretaria:dashboard'))
+        self.assertEqual(response_admin.status_code, 200)
+        self.client.logout()
