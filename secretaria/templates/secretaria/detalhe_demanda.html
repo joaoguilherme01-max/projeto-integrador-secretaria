@@ -14,10 +14,28 @@
         </a>
     </div>
 
-    <!-- BOTÕES DE EDIÇÃO -->
-    <div class="d-flex gap-2">
+    <!-- BOTÕES DE EDIÇÃO E TRANSIÇÃO DE ETAPA -->
+    <div class="d-flex flex-wrap gap-2">
+        <!-- Dropdown com Todas as Etapas do Fluxo -->
+        <div class="dropdown">
+            <button class="btn btn-outline-primary btn-sm dropdown-toggle shadow-sm" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                <i class="bi bi-arrow-right-circle me-1"></i>Mover Etapa
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end shadow">
+                <li><h6 class="dropdown-header">Selecione a Nova Etapa:</h6></li>
+                <li><a class="dropdown-item {% if demanda.status == 'RECEBIDA' %}active disabled{% endif %}" href="{% url 'secretaria:avancar_etapa' demanda.protocolo 'RECEBIDA' %}"><i class="bi bi-inbox me-2"></i>1. Recebida</a></li>
+                <li><a class="dropdown-item {% if demanda.status == 'TRIAGEM' %}active disabled{% endif %}" href="{% url 'secretaria:avancar_etapa' demanda.protocolo 'TRIAGEM' %}"><i class="bi bi-funnel me-2"></i>2. Em triagem</a></li>
+                <li><a class="dropdown-item {% if demanda.status == 'AGUARDANDO_INFO' %}active disabled{% endif %}" href="{% url 'secretaria:avancar_etapa' demanda.protocolo 'AGUARDANDO_INFO' %}"><i class="bi bi-pause-circle me-2"></i>3. Aguardando informações</a></li>
+                <li><a class="dropdown-item {% if demanda.status == 'EM_ANDAMENTO' %}active disabled{% endif %}" href="{% url 'secretaria:avancar_etapa' demanda.protocolo 'EM_ANDAMENTO' %}"><i class="bi bi-play-circle me-2"></i>4. Em andamento</a></li>
+                <li><a class="dropdown-item {% if demanda.status == 'EM_VALIDACAO' %}active disabled{% endif %}" href="{% url 'secretaria:avancar_etapa' demanda.protocolo 'EM_VALIDACAO' %}"><i class="bi bi-patch-check me-2"></i>5. Em validação</a></li>
+                <li><hr class="dropdown-divider"></li>
+                <li><a class="dropdown-item text-success {% if demanda.status == 'CONCLUIDA' %}active disabled{% endif %}" href="{% url 'secretaria:avancar_etapa' demanda.protocolo 'CONCLUIDA' %}"><i class="bi bi-check-circle-fill me-2"></i>6. Concluída</a></li>
+                <li><a class="dropdown-item text-danger {% if demanda.status == 'CANCELADA' %}active disabled{% endif %}" href="{% url 'secretaria:avancar_etapa' demanda.protocolo 'CANCELADA' %}"><i class="bi bi-x-circle-fill me-2"></i>7. Cancelada</a></li>
+            </ul>
+        </div>
+
         <a href="{% url 'secretaria:editar_demanda' demanda.protocolo %}" class="btn btn-primary btn-sm shadow-sm">
-            <i class="bi bi-pencil-square me-1"></i>Editar Demanda / Mudar Etapa
+            <i class="bi bi-pencil-square me-1"></i>Editar Dados Completos
         </a>
     </div>
 </div>

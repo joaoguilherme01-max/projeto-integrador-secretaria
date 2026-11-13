@@ -872,3 +872,62 @@ class RegistroNovasSolicitacoesChecklistTestCase(TestCase):
         self.assertRedirects(response, reverse('secretaria:detalhe_demanda', args=[demanda.protocolo]))
         self.assertContains(response, 'Demanda registrada com sucesso!')
         self.assertContains(response, demanda.protocolo)
+
+
+
+class TransicaoEtapasChecklistTestCase(TestCase):
+    def setUp(self):
+        self.servidor = User.objects.create_user(username='transicao_user', password='123')
+        PerfilUsuario.objects.create(user=self.servidor, perfil='ATENDENTE')
+        self.cat = Categoria.objects.create(nome='Matrícula')
+
+        self.demanda = Demanda.objects.create(
+            categoria=self.cat,
+            solicitante='Aluno Fluxo Completo',
+            contato='11911112222',
+            descricao='Teste de transição das 7 etapas',
+            status='RECEBIDA'
+        )
+
+    def test_ciclo_completo_todas_as_etapas(self):
+        """
+        Testa o avanço pelas 7 etapas do checklist:
+        1. RECEBIDA
+        2. TRIAGEM (Em triagem)
+        3. AGUARDANDO_INFO (Aguardando informações)
+        4. EM_ANDAMENTO (Em andamento)
+        5. EM_VALIDACAO (Em validação)
+        6. CONCLUIDA (Concluída)
+        7. CANCELADA (Cancelada)
+        """
+        self.client.force_login(self.servidor)
+        etapas = [
+            'RECEBIDA',
+            'TRIAGEM',
+            'AGUARDANDO_INFO',
+            'EM_ANDAMENTO',
+            'EM_VALIDACAO',
+            'CONCLUIDA',
+            'CANCELADA',
+        ]
+
+        for etapa in etapas:
+            url = reverse('secretaria:avancar_etapa', args=[self.demanda.protocolo, etapa])
+            response = self.client.get(url, follow=True)
+            self.assertEqual(response.status_code, 200)
+
+            self.demanda.refresh_from_db()
+            self.assertEqual(self.demanda.status, etapa)
+
+            # Verifica se gerou o histórico correspondente à transição
+            ultimo_hist = self.demanda.historicos.first()
+            self.assertEqual(ultimo_hist.nova_etapa, self.demanda.get_status_display())
+            self.assertEqual(ultimo_hist.usuario, self.servidor)
+
+        # Na etapa CONCLUIDA, verifica se preencheu data de conclusão
+        # Re-testa conclusão explicitamente
+        url_concluir = reverse('secretaria:avancar_etapa', args=[self.demanda.protocolo, 'CONCLUIDA'])
+        self.client.get(url_concluir)
+        self.demanda.refresh_from_db()
+        self.assertEqual(self.demanda.status, 'CONCLUIDA')
+        self.assertIsNotNone(self.demanda.data_conclusao)

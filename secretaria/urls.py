@@ -15,6 +15,7 @@ urlpatterns = [
     path('demandas/nova/', views.criar_demanda, name='criar_demanda'),
     path('demandas/<str:protocolo>/', views.detalhe_demanda, name='detalhe_demanda'),
     path('demandas/<str:protocolo>/editar/', views.editar_demanda, name='editar_demanda'),
+    path('demandas/<str:protocolo>/avancar/<str:novo_status>/', views.avancar_etapa_demanda, name='avancar_etapa'),
 
     # Painel restrito a Gestores e Administradores
     path('dashboard/', views.dashboard_indicadores, name='dashboard'),

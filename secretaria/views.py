@@ -297,3 +297,67 @@ def editar_demanda(request, protocolo):
         'form': form,
         'demanda': demanda,
     })
+
+
+
+@login_required
+def avancar_etapa_demanda(request, protocolo, novo_status):
+    """
+    Permite transicionar uma demanda diretamente para qualquer etapa do fluxo:
+    - RECEBIDA
+    - TRIAGEM
+    - AGUARDANDO_INFO
+    - EM_ANDAMENTO
+    - EM_VALIDACAO
+    - CONCLUIDA
+    - CANCELADA
+    Registra automaticamente a alteração no histórico de auditoria.
+    """
+    demanda = get_object_or_404(Demanda, protocolo=protocolo)
+    status_choices_dict = dict(Demanda.STATUS_CHOICES)
+
+    if novo_status not in status_choices_dict:
+        messages.error(request, 'Etapa de atendimento inválida.')
+        return redirect('secretaria:detalhe_demanda', protocolo=demanda.protocolo)
+
+    if demanda.status == novo_status:
+        messages.info(request, f'A demanda já se encontra na etapa: {status_choices_dict[novo_status]}.')
+        return redirect('secretaria:detalhe_demanda', protocolo=demanda.protocolo)
+
+    status_anterior_label = demanda.get_status_display()
+    novo_status_label = status_choices_dict[novo_status]
+
+    # Atualiza o status
+    demanda.status = novo_status
+
+    # Regras para conclusão e cancelamento
+    if novo_status == 'CONCLUIDA':
+        demanda.data_conclusao = timezone.now()
+        if not demanda.resultado:
+            demanda.resultado = "Atendimento finalizado com sucesso."
+    elif novo_status == 'CANCELADA':
+        if not demanda.resultado:
+            demanda.resultado = "Solicitação cancelada."
+    else:
+        demanda.data_conclusao = None
+
+    demanda.save()
+
+    # Cria registro no histórico de auditoria
+    Historico.objects.create(
+        demanda=demanda,
+        usuario=request.user,
+        etapa_anterior=status_anterior_label,
+        nova_etapa=novo_status_label,
+        responsavel_anterior=demanda.responsavel,
+        novo_responsavel=demanda.responsavel,
+        observacao=f"Demanda avançada de '{status_anterior_label}' para '{novo_status_label}'."
+    )
+
+    messages.success(request, f"Etapa atualizada para: {novo_status_label}!")
+    
+    # Redireciona de volta para onde veio (quadro ou detalhes)
+    next_url = request.GET.get('next')
+    if next_url:
+        return redirect(next_url)
+    return redirect('secretaria:detalhe_demanda', protocolo=demanda.protocolo)
