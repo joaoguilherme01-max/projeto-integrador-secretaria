@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Painel de Indicadores - Secretaria Escolar</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+</head>
+<body class="bg-light">
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary mb-4 shadow-sm">
+        <div class="container-fluid px-4">
+            <span class="navbar-brand fw-bold">
+                <i class="bi bi-mortarboard-fill me-2"></i>Secretaria Escolar - Gestão
+            </span>
+            <span class="navbar-text text-white-50">
+                Painel de Indicadores Gerenciais
+            </span>
+        </div>
+    </nav>
+
+    <div class="container-fluid px-4">
+        <!-- Cards de Resumo Principal -->
+        <div class="row g-3 mb-4">
+            <div class="col-12 col-sm-6 col-xl-3">
+                <div class="card border-0 shadow-sm rounded-3 bg-white border-start border-primary border-4">
+                    <div class="card-body">
+                        <div class="text-muted small fw-semibold text-uppercase">Demandas Abertas</div>
+                        <div class="d-flex align-items-center justify-content-between mt-2">
+                            <span class="display-6 fw-bold text-primary">{{ indicadores.total_abertas }}</span>
+                            <i class="bi bi-folder2-open fs-1 text-primary-emphasis opacity-50"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-12 col-sm-6 col-xl-3">
+                <div class="card border-0 shadow-sm rounded-3 bg-white border-start border-danger border-4">
+                    <div class="card-body">
+                        <div class="text-muted small fw-semibold text-uppercase">Demandas Atrasadas</div>
+                        <div class="d-flex align-items-center justify-content-between mt-2">
+                            <span class="display-6 fw-bold text-danger">{{ indicadores.total_atrasadas }}</span>
+                            <i class="bi bi-exclamation-triangle-fill fs-1 text-danger opacity-50"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-12 col-sm-6 col-xl-3">
+                <div class="card border-0 shadow-sm rounded-3 bg-white border-start border-info border-4">
+                    <div class="card-body">
+                        <div class="text-muted small fw-semibold text-uppercase">Tempo Médio de Atendimento</div>
+                        <div class="d-flex align-items-center justify-content-between mt-2">
+                            <span class="fs-2 fw-bold text-info-emphasis">{{ indicadores.tempo_medio_str }}</span>
+                            <i class="bi bi-clock-history fs-1 text-info opacity-50"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-12 col-sm-6 col-xl-3">
+                <div class="card border-0 shadow-sm rounded-3 bg-white border-start border-success border-4">
+                    <div class="card-body">
+                        <div class="text-muted small fw-semibold text-uppercase">Categorias Ativas</div>
+                        <div class="d-flex align-items-center justify-content-between mt-2">
+                            <span class="display-6 fw-bold text-success">{{ indicadores.volume_por_categoria|length }}</span>
+                            <i class="bi bi-tags-fill fs-1 text-success opacity-50"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Seções Detalhadas -->
+        <div class="row g-4 mb-4">
+            <!-- Demandas por Etapa -->
+            <div class="col-12 col-lg-6">
+                <div class="card border-0 shadow-sm rounded-3 h-100">
+                    <div class="card-header bg-white py-3 fw-bold border-0">
+                        <i class="bi bi-kanban me-2 text-primary"></i>Demandas por Etapa
+                    </div>
+                    <div class="card-body">
+                        <ul class="list-group list-group-flush">
+                            {% for etapa in indicadores.demandas_por_etapa %}
+                            <li class="list-group-item d-flex justify-content-between align-items-center px-0">
+                                <span>{{ etapa.nome }}</span>
+                                <span class="badge bg-secondary rounded-pill px-3 py-2 fs-6">{{ etapa.total }}</span>
+                            </li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Volume por Categoria -->
+            <div class="col-12 col-lg-6">
+                <div class="card border-0 shadow-sm rounded-3 h-100">
+                    <div class="card-header bg-white py-3 fw-bold border-0">
+                        <i class="bi bi-pie-chart-fill me-2 text-primary"></i>Volume por Categoria
+                    </div>
+                    <div class="card-body">
+                        <ul class="list-group list-group-flush">
+                            {% for cat in indicadores.volume_por_categoria %}
+                            <li class="list-group-item d-flex justify-content-between align-items-center px-0">
+                                <span>{{ cat.categoria }}</span>
+                                <span class="badge bg-primary bg-opacity-75 rounded-pill px-3 py-2 fs-6">{{ cat.total }}</span>
+                            </li>
+                            {% empty %}
+                            <li class="list-group-item px-0 text-muted">Nenhuma categoria registrada.</li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Distribuição por Responsável -->
+        <div class="row g-4 mb-4">
+            <div class="col-12">
+                <div class="card border-0 shadow-sm rounded-3">
+                    <div class="card-header bg-white py-3 fw-bold border-0">
+                        <i class="bi bi-people-fill me-2 text-primary"></i>Distribuição de Demandas Abertas por Responsável
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Responsável</th>
+                                        <th class="text-end">Demandas Atribuídas</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for resp in indicadores.distribuicao_por_responsavel %}
+                                    <tr>
+                                        <td class="fw-medium">
+                                            {% if resp.responsavel == 'Não atribuído' %}
+                                                <span class="text-danger"><i class="bi bi-exclamation-circle me-1"></i>Não atribuído</span>
+                                            {% else %}
+                                                <i class="bi bi-person-circle me-1 text-muted"></i>{{ resp.responsavel }}
+                                            {% endif %}
+                                        </td>
+                                        <td class="text-end">
+                                            <span class="badge bg-dark rounded-pill px-3 py-2 fs-6">{{ resp.total }}</span>
+                                        </td>
+                                    </tr>
+                                    {% empty %}
+                                    <tr>
+                                        <td colspan="2" class="text-center text-muted py-3">Não há demandas abertas no momento.</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
+

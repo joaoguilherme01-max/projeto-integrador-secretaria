@@ -118,3 +118,96 @@ class ModelosSecretariaTestCase(TestCase):
 
         self.assertEqual(demanda.anexos.count(), 1)
         self.assertEqual(demanda.anexos.first().nome_arquivo, 'comprovante.pdf')
+
+
+from secretaria.services import obter_indicadores_gestao
+from django.urls import reverse
+
+
+class IndicadoresGestaoTestCase(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username='atendente_ind', password='123', first_name='Joao', last_name='Atendente'
+        )
+        self.cat_declaracao = Categoria.objects.create(nome='Declaração')
+        self.cat_matricula = Categoria.objects.create(nome='Matrícula')
+
+        hoje = timezone.now().date()
+        agora = timezone.now()
+
+        # Demanda aberta no prazo
+        Demanda.objects.create(
+            categoria=self.cat_declaracao,
+            solicitante='Aluno 1',
+            contato='1111',
+            descricao='Teste 1',
+            status='EM_ANDAMENTO',
+            responsavel=self.user,
+            prazo=hoje + timedelta(days=2)
+        )
+
+        # Demanda aberta atrasada
+        Demanda.objects.create(
+            categoria=self.cat_matricula,
+            solicitante='Aluno 2',
+            contato='2222',
+            descricao='Teste 2',
+            status='TRIAGEM',
+            responsavel=None,
+            prazo=hoje - timedelta(days=1)
+        )
+
+        # Demanda concluída com tempo medido (durou 2 dias)
+        demanda_concluida = Demanda.objects.create(
+            categoria=self.cat_declaracao,
+            solicitante='Aluno 3',
+            contato='3333',
+            descricao='Teste 3',
+            status='CONCLUIDA',
+            responsavel=self.user,
+            prazo=hoje + timedelta(days=5),
+            data_conclusao=agora
+        )
+        # Ajusta data_entrada para 2 dias atrás para simular tempo
+        Demanda.objects.filter(id=demanda_concluida.id).update(data_entrada=agora - timedelta(days=2))
+
+    def test_calculo_indicadores(self):
+        indicadores = obter_indicadores_gestao()
+
+        # Total abertas (2 abertas: EM_ANDAMENTO e TRIAGEM)
+        self.assertEqual(indicadores['total_abertas'], 2)
+
+        # Total atrasadas (1 atrasada)
+        self.assertEqual(indicadores['total_atrasadas'], 1)
+
+        # Demandas por etapa
+        status_map = {item['status']: item['total'] for item in indicadores['demandas_por_etapa']}
+        self.assertEqual(status_map.get('EM_ANDAMENTO'), 1)
+        self.assertEqual(status_map.get('TRIAGEM'), 1)
+        self.assertEqual(status_map.get('CONCLUIDA'), 1)
+        self.assertEqual(status_map.get('RECEBIDA'), 0)
+
+        # Volume por categoria
+        cat_map = {item['categoria']: item['total'] for item in indicadores['volume_por_categoria']}
+        self.assertEqual(cat_map.get('Declaração'), 2)
+        self.assertEqual(cat_map.get('Matrícula'), 1)
+
+        # Distribuição por responsável
+        resp_map = {item['responsavel']: item['total'] for item in indicadores['distribuicao_por_responsavel']}
+        self.assertEqual(resp_map.get('Joao Atendente'), 1)
+        self.assertEqual(resp_map.get('Não atribuído'), 1)
+
+        # Tempo médio
+        self.assertIn('2d', indicadores['tempo_medio_str'])
+
+    def test_view_dashboard(self):
+        response = self.client.get(reverse('secretaria:dashboard'))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Painel de Indicadores Gerenciais')
+
+    def test_api_indicadores(self):
+        response = self.client.get(reverse('secretaria:api_indicadores'))
+        self.assertEqual(response.status_code, 200)
+        json_data = response.json()
+        self.assertEqual(json_data['total_abertas'], 2)
+        self.assertEqual(json_data['total_atrasadas'], 1)
