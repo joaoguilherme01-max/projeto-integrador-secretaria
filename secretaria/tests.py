@@ -810,3 +810,65 @@ class AuditoriaMudancasTestCase(TestCase):
 
         # 5. Salvar observações
         self.assertIn('Documentação conferida no arquivo geral; processo iniciado.', historico.observacao)
+
+
+
+class RegistroNovasSolicitacoesChecklistTestCase(TestCase):
+    def setUp(self):
+        self.atendente = User.objects.create_user(
+            username='atendente_registro', password='123', first_name='Camila', last_name='Atendente'
+        )
+        PerfilUsuario.objects.create(user=self.atendente, perfil='ATENDENTE')
+        self.categoria = Categoria.objects.create(nome='Declaração de Frequência')
+
+    def test_checklist_validar_informacoes_obrigatorias(self):
+        """Item do Checklist: Validar informações obrigatórias (rejeitar submissão com campos vazios)."""
+        self.client.force_login(self.atendente)
+        url = reverse('secretaria:criar_demanda')
+
+        # Envia formulário sem preencher os campos obrigatórios
+        response = self.client.post(url, {})
+        self.assertEqual(response.status_code, 200)
+
+        form = response.context['form']
+        self.assertFalse(form.is_valid())
+        self.assertIn('solicitante', form.errors)
+        self.assertIn('contato', form.errors)
+        self.assertIn('categoria', form.errors)
+        self.assertIn('descricao', form.errors)
+        self.assertIn('prioridade', form.errors)
+
+    def test_checklist_receber_salvar_e_retornar_confirmacao(self):
+        """
+        Itens do Checklist:
+        1. Receber dados do formulário
+        2. Salvar a demanda no banco
+        3. Retornar confirmação de cadastro
+        """
+        self.client.force_login(self.atendente)
+        url = reverse('secretaria:criar_demanda')
+
+        dados_formulario = {
+            'solicitante': 'Lucas Silveira',
+            'contato': '(11) 98888-7777',
+            'categoria': str(self.categoria.id),
+            'descricao': 'Precisa de declaração de frequência para estágio curricular.',
+            'prioridade': 'ALTA',
+            'prazo': (timezone.now().date() + timedelta(days=2)).strftime('%Y-%m-%d'),
+            'responsavel': str(self.atendente.id),
+        }
+
+        # 1. Receber dados do formulário (POST)
+        response = self.client.post(url, dados_formulario, follow=True)
+
+        # 2. Salvar a demanda
+        demanda = Demanda.objects.filter(solicitante='Lucas Silveira').first()
+        self.assertIsNotNone(demanda)
+        self.assertEqual(demanda.categoria, self.categoria)
+        self.assertEqual(demanda.prioridade, 'ALTA')
+        self.assertEqual(demanda.responsavel, self.atendente)
+
+        # 3. Retornar confirmação de cadastro (Redirecionamento com mensagem de sucesso e protocolo)
+        self.assertRedirects(response, reverse('secretaria:detalhe_demanda', args=[demanda.protocolo]))
+        self.assertContains(response, 'Demanda registrada com sucesso!')
+        self.assertContains(response, demanda.protocolo)
