@@ -608,3 +608,58 @@ class DetalheEdicaoDemandaTestCase(TestCase):
         self.assertEqual(ultimo_hist.nova_etapa, 'Em Andamento')
         self.assertEqual(ultimo_hist.usuario, self.user)
         self.assertIn('Demanda assumida por Renata', ultimo_hist.observacao)
+
+
+
+class ProtocoloUnicoTestCase(TestCase):
+    def setUp(self):
+        self.cat = Categoria.objects.create(nome='Matrícula e Rematrícula')
+
+    def test_padrao_formato_protocolo(self):
+        """Verifica se o protocolo segue estritamente o padrão 'SEC-YYYY-NNNNN'."""
+        demanda = Demanda.objects.create(
+            categoria=self.cat,
+            solicitante='Aluno Teste Padrão',
+            contato='1199999999',
+            descricao='Teste de formato'
+        )
+        ano = timezone.now().year
+        padrao = rf"^SEC-{ano}-\d{{5}}$"
+        import re
+        self.assertTrue(re.match(padrao, demanda.protocolo))
+
+    def test_geracao_sequencial_protocolo(self):
+        """Garante que a numeração seja rigorosamente sequencial."""
+        ano = timezone.now().year
+        d1 = Demanda.objects.create(categoria=self.cat, solicitante='A1', contato='1', descricao='D1')
+        d2 = Demanda.objects.create(categoria=self.cat, solicitante='A2', contato='2', descricao='D2')
+        d3 = Demanda.objects.create(categoria=self.cat, solicitante='A3', contato='3', descricao='D3')
+
+        seq1 = int(d1.protocolo.split('-')[-1])
+        seq2 = int(d2.protocolo.split('-')[-1])
+        seq3 = int(d3.protocolo.split('-')[-1])
+
+        self.assertEqual(seq2, seq1 + 1)
+        self.assertEqual(seq3, seq2 + 1)
+
+    def test_impedir_protocolos_duplicados(self):
+        """Garante unicidade estrita: erro de integridade ao tentar duplicar protocolo."""
+        from django.db import IntegrityError
+        demanda = Demanda.objects.create(
+            categoria=self.cat,
+            solicitante='Aluno Original',
+            contato='1199999999',
+            descricao='Original'
+        )
+
+        demanda_duplicada = Demanda(
+            categoria=self.cat,
+            solicitante='Tentativa Duplicada',
+            contato='1188888888',
+            descricao='Duplicada'
+        )
+        # Força o mesmo protocolo manualmente para testar a restrição UNIQUE do banco
+        demanda_duplicada.protocolo = demanda.protocolo
+
+        with self.assertRaises(IntegrityError):
+            demanda_duplicada.save()

@@ -79,19 +79,27 @@ class Demanda(models.Model):
 
     def save(self, *args, **kwargs):
         if not self.protocolo:
-            ano_atual = timezone.now().year
-            prefixo = f"SEC-{ano_atual}-"
-            ultima_demanda = Demanda.objects.filter(protocolo__startswith=prefixo).order_by('-id').first()
-            if ultima_demanda and ultima_demanda.protocolo:
-                try:
-                    ultimo_seq = int(ultima_demanda.protocolo.split('-')[-1])
-                    proximo_seq = ultimo_seq + 1
-                except (ValueError, IndexError):
+            from django.db import transaction
+            with transaction.atomic():
+                ano_atual = timezone.now().year
+                prefixo = f"SEC-{ano_atual}-"
+                ultima_demanda = Demanda.objects.filter(
+                    protocolo__startswith=prefixo
+                ).select_for_update().order_by('-protocolo').first()
+
+                if ultima_demanda and ultima_demanda.protocolo:
+                    try:
+                        ultimo_seq = int(ultima_demanda.protocolo.split('-')[-1])
+                        proximo_seq = ultimo_seq + 1
+                    except (ValueError, IndexError):
+                        proximo_seq = 1
+                else:
                     proximo_seq = 1
-            else:
-                proximo_seq = 1
-            self.protocolo = f"{prefixo}{proximo_seq:05d}"
-        super().save(*args, **kwargs)
+
+                self.protocolo = f"{prefixo}{proximo_seq:05d}"
+                super().save(*args, **kwargs)
+        else:
+            super().save(*args, **kwargs)
 
 
 class Historico(models.Model):
