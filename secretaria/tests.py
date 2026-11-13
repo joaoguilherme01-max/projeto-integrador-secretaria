@@ -407,3 +407,51 @@ class AutenticacaoControleAcessoTestCase(TestCase):
         response_admin = self.client.get(reverse('secretaria:dashboard'))
         self.assertEqual(response_admin.status_code, 200)
         self.client.logout()
+
+
+
+class TelaInicialTestCase(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(username='user_home', password='123')
+        PerfilUsuario.objects.create(user=self.user, perfil='ATENDENTE')
+
+        cat = Categoria.objects.create(nome='Matrícula')
+        hoje = timezone.now().date()
+        agora = timezone.now()
+
+        # Demanda aberta no prazo
+        self.dem_aberta = Demanda.objects.create(
+            categoria=cat, solicitante='Ana Clara', contato='123',
+            descricao='Matrícula nova', status='EM_ANDAMENTO',
+            prazo=hoje + timedelta(days=2), responsavel=self.user
+        )
+
+        # Demanda atrasada
+        self.dem_atrasada = Demanda.objects.create(
+            categoria=cat, solicitante='Bernardo Lima', contato='456',
+            descricao='Documento pendente', status='TRIAGEM',
+            prazo=hoje - timedelta(days=3), responsavel=self.user
+        )
+
+        # Demanda concluída
+        self.dem_concluida = Demanda.objects.create(
+            categoria=cat, solicitante='Carlos Eduardo', contato='789',
+            descricao='Finalizado', status='CONCLUIDA',
+            data_conclusao=agora, responsavel=self.user
+        )
+
+    def test_tela_inicial_carregamento_e_indicadores(self):
+        self.client.force_login(self.user)
+        response = self.client.get(reverse('secretaria:index'))
+        self.assertEqual(response.status_code, 200)
+
+        # Verifica presença dos totalizadores e demandas
+        self.assertContains(response, 'Visão Geral das Demandas')
+        self.assertContains(response, 'Demandas Abertas')
+        self.assertContains(response, 'Demandas Atrasadas')
+        self.assertContains(response, 'Demandas Concluídas')
+
+        # Verifica se os protocolos aparecem nas seções
+        self.assertContains(response, self.dem_aberta.protocolo)
+        self.assertContains(response, self.dem_atrasada.protocolo)
+        self.assertContains(response, self.dem_concluida.protocolo)

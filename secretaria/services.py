@@ -175,3 +175,50 @@ def listar_demandas_filtradas(filtros):
             pass
 
     return qs.order_by('-data_entrada')
+
+
+
+def obter_dados_tela_inicial():
+    """
+    Retorna os dados consolidados para a tela inicial:
+    - Indicadores gerais (abertas, atrasadas, concluídas, tempo médio)
+    - Listas recentes de:
+        - Demandas abertas
+        - Demandas atrasadas
+        - Demandas concluídas
+    """
+    hoje = timezone.now().date()
+    status_fechados = ['CONCLUIDA', 'CANCELADA']
+
+    # Totalizadores para a área de indicadores
+    demandas_abertas_qs = Demanda.objects.exclude(status__in=status_fechados).select_related('categoria', 'responsavel')
+    total_abertas = demandas_abertas_qs.count()
+
+    demandas_atrasadas_qs = demandas_abertas_qs.filter(prazo__lt=hoje)
+    total_atrasadas = demandas_atrasadas_qs.count()
+
+    demandas_concluidas_qs = Demanda.objects.filter(status='CONCLUIDA').select_related('categoria', 'responsavel')
+    total_concluidas = demandas_concluidas_qs.count()
+
+    total_geral = Demanda.objects.count()
+
+    # Listagens para exibição na tela inicial (limitadas para visualização limpa)
+    recentes_abertas = demandas_abertas_qs.order_by('-data_entrada')[:8]
+    recentes_atrasadas = demandas_atrasadas_qs.order_by('prazo')[:8]
+    recentes_concluidas = demandas_concluidas_qs.order_by('-data_conclusao', '-data_entrada')[:8]
+
+    # Indicadores extras
+    indicadores_completos = obter_indicadores_gestao()
+
+    return {
+        'total_abertas': total_abertas,
+        'total_atrasadas': total_atrasadas,
+        'total_concluidas': total_concluidas,
+        'total_geral': total_geral,
+        'recentes_abertas': recentes_abertas,
+        'recentes_atrasadas': recentes_atrasadas,
+        'recentes_concluidas': recentes_concluidas,
+        'tempo_medio_str': indicadores_completos['tempo_medio_str'],
+        'demandas_por_etapa': indicadores_completos['demandas_por_etapa'],
+        'volume_por_categoria': indicadores_completos['volume_por_categoria'],
+    }

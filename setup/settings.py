@@ -118,7 +118,7 @@ USE_TZ = True
 STATIC_URL = 'static/'
 
 LOGIN_URL = 'secretaria:login'
-LOGIN_REDIRECT_URL = 'secretaria:lista_demandas'
+LOGIN_REDIRECT_URL = 'secretaria:index'
 LOGOUT_REDIRECT_URL = 'secretaria:login'
 
 

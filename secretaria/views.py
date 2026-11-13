@@ -7,8 +7,23 @@ from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.forms import AuthenticationForm
 from django.contrib import messages
 from .models import Demanda, Categoria
-from .services import obter_indicadores_gestao, listar_demandas_filtradas
+from .services import obter_indicadores_gestao, listar_demandas_filtradas, obter_dados_tela_inicial
 from .decorators import perfil_necessario
+
+
+@login_required
+def index_view(request):
+    """
+    Tela inicial do sistema com:
+    - Área de indicadores gerais
+    - Abas/Seções para Demandas Abertas, Atrasadas e Concluídas
+    """
+    dados = obter_dados_tela_inicial()
+    context = {
+        'dados': dados,
+        'perfil_usuario': getattr(request.user, 'perfil', None),
+    }
+    return render(request, 'secretaria/index.html', context)
 
 
 def login_view(request):
