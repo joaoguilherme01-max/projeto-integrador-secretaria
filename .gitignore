@@ -1,0 +1,44 @@
+# Ambientes virtuais
+venv/
+env/
+ENV/
+.venv/
+
+# Byte-compiled / arquivos de cache do Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Banco de dados de desenvolvimento local
+*.sqlite3
+*.db
+
+# Backups gerados
+backups/
+
+# Arquivos de mídia e uploads do usuário
+media/
+anexos/
+
+# Arquivos estáticos coletados
+staticfiles/
+
+# Variáveis de ambiente e segredos
+.env
+.env.*
+!.env.example
+
+# Logs do sistema e testes
+*.log
+local_settings.py
+db.sqlite3-journal
+
+# IDEs e editores
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+.DS_Store
+Thumbs.db
+
