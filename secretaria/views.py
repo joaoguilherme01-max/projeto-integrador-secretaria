@@ -8,7 +8,7 @@ from django.contrib.auth.forms import AuthenticationForm
 from django.contrib import messages
 from django.utils import timezone
 from .models import Demanda, Categoria, Historico
-from .forms import DemandaForm
+from .forms import DemandaForm, EditarDemandaForm
 from .services import obter_indicadores_gestao, listar_demandas_filtradas, obter_dados_tela_inicial, obter_quadro_kanban
 from .decorators import perfil_necessario
 
@@ -207,3 +207,70 @@ def quadro_kanban(request):
         'perfil_usuario': getattr(request.user, 'perfil', None),
     }
     return render(request, 'secretaria/quadro_kanban.html', context)
+
+
+
+@login_required
+def editar_demanda(request, protocolo):
+    """
+    Permite editar os dados da demanda, movimentar etapas, trocar responsável
+    e adicionar observações, gerando registro automático no histórico de auditoria.
+    """
+    demanda = get_object_or_404(Demanda, protocolo=protocolo)
+    status_anterior = demanda.status
+    responsavel_anterior = demanda.responsavel
+
+    if request.method == 'POST':
+        form = EditarDemandaForm(request.POST, instance=demanda)
+        if form.is_valid():
+            demanda_atualizada = form.save(commit=False)
+            observacao = form.cleaned_data.get('observacao_alteracao', '').strip()
+
+            # Se concluiu agora, preenche data_conclusao
+            if demanda_atualizada.status == 'CONCLUIDA' and not demanda_atualizada.data_conclusao:
+                demanda_atualizada.data_conclusao = timezone.now()
+            elif demanda_atualizada.status != 'CONCLUIDA':
+                demanda_atualizada.data_conclusao = None
+
+            demanda_atualizada.save()
+
+            # Cria histórico se houve mudança de status, responsável ou se uma observação foi inserida
+            mudou_status = (status_anterior != demanda_atualizada.status)
+            mudou_responsavel = (responsavel_anterior != demanda_atualizada.responsavel)
+
+            if mudou_status or mudou_responsavel or observacao:
+                desc_status_ant = dict(Demanda.STATUS_CHOICES).get(status_anterior, status_anterior)
+                desc_status_novo = demanda_atualizada.get_status_display()
+                
+                obs_final = observacao
+                if not obs_final:
+                    detalhes = []
+                    if mudou_status:
+                        detalhes.append(f"Status alterado de '{desc_status_ant}' para '{desc_status_novo}'")
+                    if mudou_responsavel:
+                        ant_nome = responsavel_anterior.get_full_name() or responsavel_anterior.username if responsavel_anterior else "Não atribuído"
+                        novo_nome = demanda_atualizada.responsavel.get_full_name() or demanda_atualizada.responsavel.username if demanda_atualizada.responsavel else "Não atribuído"
+                        detalhes.append(f"Responsável alterado de '{ant_nome}' para '{novo_nome}'")
+                    obs_final = ". ".join(detalhes)
+
+                Historico.objects.create(
+                    demanda=demanda_atualizada,
+                    usuario=request.user,
+                    etapa_anterior=desc_status_ant if mudou_status else desc_status_novo,
+                    nova_etapa=desc_status_novo,
+                    responsavel_anterior=responsavel_anterior,
+                    novo_responsavel=demanda_atualizada.responsavel,
+                    observacao=obs_final
+                )
+
+            messages.success(request, f"Demanda {demanda.protocolo} atualizada com sucesso!")
+            return redirect('secretaria:detalhe_demanda', protocolo=demanda.protocolo)
+        else:
+            messages.error(request, 'Por favor, verifique os campos do formulário.')
+    else:
+        form = EditarDemandaForm(instance=demanda)
+
+    return render(request, 'secretaria/form_editar_demanda.html', {
+        'form': form,
+        'demanda': demanda,
+    })

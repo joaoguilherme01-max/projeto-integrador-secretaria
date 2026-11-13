@@ -531,3 +531,80 @@ class QuadroKanbanTestCase(TestCase):
         self.assertContains(response, 'Lucas')
         # 6. Status (título da coluna do Kanban)
         self.assertContains(response, 'Em Andamento')
+
+
+
+class DetalheEdicaoDemandaTestCase(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(username='servidor_detalhe', password='123', first_name='Joao')
+        PerfilUsuario.objects.create(user=self.user, perfil='ATENDENTE')
+
+        self.outro_user = User.objects.create_user(username='outro_resp', password='123', first_name='Renata')
+        PerfilUsuario.objects.create(user=self.outro_user, perfil='ATENDENTE')
+
+        self.cat = Categoria.objects.create(nome='Transferência Escolar')
+        self.demanda = Demanda.objects.create(
+            categoria=self.cat,
+            solicitante='Pedro Henrique',
+            contato='(11) 91234-5678',
+            descricao='Solicita transferência para outra escola.',
+            prioridade='MEDIA',
+            status='TRIAGEM',
+            responsavel=self.user,
+            prazo=timezone.now().date() + timedelta(days=5)
+        )
+
+        Historico.objects.create(
+            demanda=self.demanda,
+            usuario=self.user,
+            etapa_anterior='RECEBIDA',
+            nova_etapa='TRIAGEM',
+            observacao='Entrada e triagem inicial de documentação.'
+        )
+
+    def test_exibir_dados_completos_e_historico(self):
+        self.client.force_login(self.user)
+        response = self.client.get(reverse('secretaria:detalhe_demanda', args=[self.demanda.protocolo]))
+        self.assertEqual(response.status_code, 200)
+
+        # Dados completos
+        self.assertContains(response, self.demanda.protocolo)
+        self.assertContains(response, 'Pedro Henrique')
+        self.assertContains(response, '(11) 91234-5678')
+        self.assertContains(response, 'Transferência Escolar')
+        self.assertContains(response, 'Solicita transferência para outra escola.')
+
+        # Histórico e observações
+        self.assertContains(response, 'Entrada e triagem inicial de documentação.')
+        self.assertContains(response, 'Histórico de Alterações e Auditoria')
+
+        # Botão de edição
+        self.assertContains(response, reverse('secretaria:editar_demanda', args=[self.demanda.protocolo]))
+
+    def test_editar_demanda_e_gerar_historico(self):
+        self.client.force_login(self.user)
+        dados = {
+            'solicitante': 'Pedro Henrique Atualizado',
+            'contato': '(11) 91234-5678',
+            'categoria': str(self.cat.id),
+            'descricao': 'Solicita transferência com urgência.',
+            'prioridade': 'ALTA',
+            'status': 'EM_ANDAMENTO',
+            'responsavel': str(self.outro_user.id),
+            'prazo': (timezone.now().date() + timedelta(days=3)).strftime('%Y-%m-%d'),
+            'observacao_alteracao': 'Demanda assumida por Renata para confecção dos documentos.',
+            'resultado': '',
+        }
+        response = self.client.post(reverse('secretaria:editar_demanda', args=[self.demanda.protocolo]), dados)
+        self.assertEqual(response.status_code, 302)
+
+        self.demanda.refresh_from_db()
+        self.assertEqual(self.demanda.status, 'EM_ANDAMENTO')
+        self.assertEqual(self.demanda.prioridade, 'ALTA')
+        self.assertEqual(self.demanda.responsavel, self.outro_user)
+
+        # Verifica se o novo histórico foi gravado
+        ultimo_hist = self.demanda.historicos.first()
+        self.assertEqual(ultimo_hist.nova_etapa, 'Em Andamento')
+        self.assertEqual(ultimo_hist.usuario, self.user)
+        self.assertIn('Demanda assumida por Renata', ultimo_hist.observacao)

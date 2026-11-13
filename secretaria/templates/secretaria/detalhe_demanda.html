@@ -3,84 +3,176 @@
 {% block title %}Demanda {{ demanda.protocolo }} - Secretaria Escolar{% endblock %}
 
 {% block content %}
-<div class="mb-3">
-    <a href="{% url 'secretaria:lista_demandas' %}" class="btn btn-outline-secondary btn-sm">
-        <i class="bi bi-arrow-left me-1"></i>Voltar para Busca
-    </a>
+<!-- Botões de Ação e Navegação -->
+<div class="d-flex flex-column flex-sm-row justify-content-between align-items-sm-center mb-4 gap-2">
+    <div>
+        <a href="{% url 'secretaria:lista_demandas' %}" class="btn btn-outline-secondary btn-sm">
+            <i class="bi bi-arrow-left me-1"></i>Voltar para a Lista
+        </a>
+        <a href="{% url 'secretaria:quadro_kanban' %}" class="btn btn-outline-secondary btn-sm ms-1">
+            <i class="bi bi-kanban me-1"></i>Ver no Quadro
+        </a>
+    </div>
+
+    <!-- BOTÕES DE EDIÇÃO -->
+    <div class="d-flex gap-2">
+        <a href="{% url 'secretaria:editar_demanda' demanda.protocolo %}" class="btn btn-primary btn-sm shadow-sm">
+            <i class="bi bi-pencil-square me-1"></i>Editar Demanda / Mudar Etapa
+        </a>
+    </div>
 </div>
 
+<!-- DADOS COMPLETOS DA SOLICITAÇÃO -->
 <div class="card border-0 shadow-sm rounded-3 mb-4">
-    <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
-        <h5 class="fw-bold mb-0 text-primary">Protocolo: {{ demanda.protocolo }}</h5>
-        <span class="badge badge-status-{{ demanda.status }} px-3 py-2 fs-6">{{ demanda.get_status_display }}</span>
+    <div class="card-header bg-white py-3 d-flex flex-column flex-sm-row justify-content-between align-items-sm-center border-0 gap-2">
+        <div>
+            <span class="text-muted small text-uppercase fw-semibold">Número de Protocolo</span>
+            <h4 class="fw-bold mb-0 text-primary font-monospace">
+                <i class="bi bi-hash"></i>{{ demanda.protocolo }}
+            </h4>
+        </div>
+        <div class="d-flex gap-2">
+            <span class="badge badge-status-{{ demanda.status }} px-3 py-2 fs-6 rounded-pill">
+                {{ demanda.get_status_display }}
+            </span>
+            <span class="badge badge-prioridade-{{ demanda.prioridade }} px-3 py-2 fs-6 rounded-pill">
+                Prioridade {{ demanda.get_prioridade_display }}
+            </span>
+        </div>
     </div>
-    <div class="card-body">
-        <div class="row g-3">
-            <div class="col-md-6">
-                <label class="text-muted small">Solicitante</label>
-                <div class="fw-bold">{{ demanda.solicitante }}</div>
+
+    <div class="card-body p-4 pt-2">
+        <div class="row g-4">
+            <!-- Solicitante -->
+            <div class="col-12 col-md-4">
+                <label class="text-muted small fw-semibold text-uppercase">Solicitante</label>
+                <div class="fs-5 fw-bold text-dark">{{ demanda.solicitante }}</div>
             </div>
-            <div class="col-md-6">
-                <label class="text-muted small">Contato</label>
-                <div class="fw-bold">{{ demanda.contato }}</div>
-            </div>
-            <div class="col-md-4">
-                <label class="text-muted small">Categoria</label>
-                <div>{{ demanda.categoria.nome }}</div>
-            </div>
-            <div class="col-md-4">
-                <label class="text-muted small">Prioridade</label>
-                <div>
-                    <span class="badge badge-prioridade-{{ demanda.prioridade }} rounded-pill px-2 py-1">
-                        {{ demanda.get_prioridade_display }}
-                    </span>
+
+            <!-- Contato -->
+            <div class="col-12 col-md-4">
+                <label class="text-muted small fw-semibold text-uppercase">Contato</label>
+                <div class="fs-5 text-dark">
+                    <i class="bi bi-telephone-outbound me-1 text-muted"></i>{{ demanda.contato }}
                 </div>
             </div>
-            <div class="col-md-4">
-                <label class="text-muted small">Responsável Atual</label>
-                <div>{{ demanda.responsavel.get_full_name|default:demanda.responsavel.username|default:"Não atribuído" }}</div>
+
+            <!-- Categoria -->
+            <div class="col-12 col-md-4">
+                <label class="text-muted small fw-semibold text-uppercase">Tipo de Solicitação</label>
+                <div class="fs-5 text-dark">
+                    <i class="bi bi-tag-fill me-1 text-primary"></i>{{ demanda.categoria.nome }}
+                </div>
             </div>
-            <div class="col-md-6">
-                <label class="text-muted small">Data de Entrada</label>
-                <div>{{ demanda.data_entrada|date:"d/m/Y H:i" }}</div>
+
+            <!-- Responsável -->
+            <div class="col-12 col-md-4">
+                <label class="text-muted small fw-semibold text-uppercase">Responsável Principal</label>
+                <div class="fs-5 text-dark">
+                    {% if demanda.responsavel %}
+                        <i class="bi bi-person-circle me-1 text-muted"></i>
+                        {{ demanda.responsavel.get_full_name|default:demanda.responsavel.username }}
+                    {% else %}
+                        <span class="badge bg-warning text-dark border">Pendente de atribuição (Triagem)</span>
+                    {% endif %}
+                </div>
             </div>
-            <div class="col-md-6">
-                <label class="text-muted small">Prazo de Conclusão</label>
-                <div>{{ demanda.prazo|date:"d/m/Y"|default:"Não definido" }}</div>
+
+            <!-- Data de Entrada -->
+            <div class="col-12 col-md-4">
+                <label class="text-muted small fw-semibold text-uppercase">Data e Hora de Entrada</label>
+                <div class="fs-6 text-dark">
+                    <i class="bi bi-clock me-1 text-muted"></i>{{ demanda.data_entrada|date:"d/m/Y \à\s H:i" }}
+                </div>
             </div>
+
+            <!-- Prazo Previsto -->
+            <div class="col-12 col-md-4">
+                <label class="text-muted small fw-semibold text-uppercase">Prazo Previsto</label>
+                <div class="fs-6 text-dark">
+                    {% if demanda.prazo %}
+                        <i class="bi bi-calendar-check me-1 text-muted"></i>{{ demanda.prazo|date:"d/m/Y" }}
+                    {% else %}
+                        <span class="text-muted">Não definido</span>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Descrição Completa -->
             <div class="col-12">
-                <label class="text-muted small">Descrição da Solicitação</label>
-                <div class="p-3 bg-light rounded-2 border">{{ demanda.descricao }}</div>
+                <label class="text-muted small fw-semibold text-uppercase">Descrição Detalhada do Pedido</label>
+                <div class="p-3 bg-light rounded-3 border mt-1 fs-6">
+                    {{ demanda.descricao|linebreaksbr }}
+                </div>
             </div>
+
+            <!-- Resultado / Observação de Encerramento (se houver) -->
+            {% if demanda.resultado or demanda.status == 'CONCLUIDA' or demanda.status == 'CANCELADA' %}
+            <div class="col-12">
+                <label class="text-muted small fw-semibold text-uppercase">Resultado / Justificativa Final</label>
+                <div class="p-3 bg-white rounded-3 border-start border-4 {% if demanda.status == 'CONCLUIDA' %}border-success bg-success bg-opacity-10{% else %}border-danger bg-danger bg-opacity-10{% endif %} mt-1">
+                    {{ demanda.resultado|default:"Nenhuma observação final registrada."|linebreaksbr }}
+                    {% if demanda.data_conclusao %}
+                        <div class="small text-muted mt-2">
+                            <i class="bi bi-check-all me-1"></i>Finalizado em: {{ demanda.data_conclusao|date:"d/m/Y \à\s H:i" }}
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
         </div>
     </div>
 </div>
 
-<!-- Linha do Tempo / Histórico -->
+<!-- HISTÓRICO DE ALTERAÇÕES E OBSERVAÇÕES -->
 <div class="card border-0 shadow-sm rounded-3">
-    <div class="card-header bg-white py-3 fw-bold">
-        <i class="bi bi-clock-history text-primary me-2"></i>Histórico de Alterações e Auditoria
+    <div class="card-header bg-white py-3 border-0 d-flex justify-content-between align-items-center">
+        <h5 class="fw-bold mb-0 text-dark">
+            <i class="bi bi-clock-history text-primary me-2"></i>Histórico de Alterações e Auditoria
+        </h5>
+        <span class="badge bg-secondary rounded-pill">{{ demanda.historicos.count }} registros</span>
     </div>
-    <div class="card-body">
-        <ul class="list-group list-group-flush">
+
+    <div class="card-body p-4 pt-1">
+        {% if demanda.historicos.exists %}
+        <div class="timeline position-relative ps-4 border-start border-2 border-primary border-opacity-25 ms-2 my-2">
             {% for hist in demanda.historicos.all %}
-            <li class="list-group-item px-0 py-3">
-                <div class="d-flex justify-content-between">
-                    <strong>{{ hist.nova_etapa }}</strong>
-                    <span class="text-muted small">{{ hist.data_alteracao|date:"d/m/Y H:i" }}</span>
+            <div class="mb-4 position-relative">
+                <!-- Ícone na linha do tempo -->
+                <i class="bi bi-circle-fill text-primary position-absolute" style="left: -31px; top: 2px; font-size: 0.75rem;"></i>
+
+                <div class="d-flex flex-column flex-sm-row justify-content-between align-items-sm-center">
+                    <div>
+                        <span class="fw-bold text-dark">{{ hist.nova_etapa }}</span>
+                        {% if hist.etapa_anterior and hist.etapa_anterior != hist.nova_etapa %}
+                            <span class="text-muted small">(Anterior: {{ hist.etapa_anterior }})</span>
+                        {% endif %}
+                    </div>
+                    <span class="text-muted small">
+                        <i class="bi bi-calendar3 me-1"></i>{{ hist.data_alteracao|date:"d/m/Y \à\s H:i" }}
+                    </span>
                 </div>
-                <div class="small text-muted">
-                    Por: {{ hist.usuario.get_full_name|default:hist.usuario.username }}
-                    {% if hist.etapa_anterior %}| De: {{ hist.etapa_anterior }}{% endif %}
+
+                <div class="small text-secondary mt-1">
+                    <i class="bi bi-person me-1"></i>Alterado por: <strong>{{ hist.usuario.get_full_name|default:hist.usuario.username }}</strong>
+                    {% if hist.novo_responsavel %}
+                        | Responsável: <strong>{{ hist.novo_responsavel.get_full_name|default:hist.novo_responsavel.username }}</strong>
+                    {% endif %}
                 </div>
+
+                <!-- Observação do histórico -->
                 {% if hist.observacao %}
-                <div class="mt-2 text-secondary">{{ hist.observacao }}</div>
+                <div class="p-2 px-3 bg-light rounded-2 border small mt-2 text-dark">
+                    <i class="bi bi-chat-left-text me-1 text-muted"></i>
+                    <strong>Observação:</strong> {{ hist.observacao }}
+                </div>
                 {% endif %}
-            </li>
-            {% empty %}
-            <li class="list-group-item px-0 text-muted">Nenhum histórico registrado para esta demanda.</li>
+            </div>
             {% endfor %}
-        </ul>
+        </div>
+        {% else %}
+        <p class="text-muted mb-0 py-3 text-center">Nenhum histórico registrado para esta demanda.</p>
+        {% endif %}
     </div>
 </div>
 {% endblock %}

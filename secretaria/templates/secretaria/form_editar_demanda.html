@@ -1,0 +1,151 @@
+{% extends 'secretaria/base.html' %}
+
+{% block title %}Editar Demanda {{ demanda.protocolo }} - Secretaria Escolar{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-12 col-lg-8">
+        <div class="card border-0 shadow-sm rounded-3">
+            <div class="card-header bg-white py-3 border-0 d-flex justify-content-between align-items-center">
+                <div>
+                    <h5 class="fw-bold mb-1 text-primary">
+                        <i class="bi bi-pencil-square me-2"></i>Atualizar Demanda {{ demanda.protocolo }}
+                    </h5>
+                    <p class="text-muted small mb-0">Modifique o status, atribua responsável, altere prazos e registre observações.</p>
+                </div>
+                <a href="{% url 'secretaria:detalhe_demanda' demanda.protocolo %}" class="btn btn-outline-secondary btn-sm">
+                    <i class="bi bi-arrow-left me-1"></i>Voltar
+                </a>
+            </div>
+
+            <div class="card-body p-4">
+                <form method="POST" action="{% url 'secretaria:editar_demanda' demanda.protocolo %}" novalidate>
+                    {% csrf_token %}
+
+                    <!-- Status e Prioridade -->
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <label for="{{ form.status.id_for_label }}" class="form-label small fw-semibold">
+                                Status da Demanda (Etapa) <span class="text-danger">*</span>
+                            </label>
+                            {{ form.status }}
+                            {% if form.status.errors %}
+                                <div class="text-danger small mt-1">{{ form.status.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+
+                        <div class="col-md-6">
+                            <label for="{{ form.prioridade.id_for_label }}" class="form-label small fw-semibold">
+                                Prioridade <span class="text-danger">*</span>
+                            </label>
+                            {{ form.prioridade }}
+                            {% if form.prioridade.errors %}
+                                <div class="text-danger small mt-1">{{ form.prioridade.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Responsável e Prazo -->
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <label for="{{ form.responsavel.id_for_label }}" class="form-label small fw-semibold">
+                                Responsável pelo Atendimento
+                            </label>
+                            {{ form.responsavel }}
+                            {% if form.responsavel.errors %}
+                                <div class="text-danger small mt-1">{{ form.responsavel.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+
+                        <div class="col-md-6">
+                            <label for="{{ form.prazo.id_for_label }}" class="form-label small fw-semibold">
+                                Prazo Previsto
+                            </label>
+                            {{ form.prazo }}
+                            {% if form.prazo.errors %}
+                                <div class="text-danger small mt-1">{{ form.prazo.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Solicitante e Contato -->
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <label for="{{ form.solicitante.id_for_label }}" class="form-label small fw-semibold">
+                                Solicitante <span class="text-danger">*</span>
+                            </label>
+                            {{ form.solicitante }}
+                            {% if form.solicitante.errors %}
+                                <div class="text-danger small mt-1">{{ form.solicitante.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+
+                        <div class="col-md-6">
+                            <label for="{{ form.contato.id_for_label }}" class="form-label small fw-semibold">
+                                Contato <span class="text-danger">*</span>
+                            </label>
+                            {{ form.contato }}
+                            {% if form.contato.errors %}
+                                <div class="text-danger small mt-1">{{ form.contato.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Categoria -->
+                    <div class="mb-3">
+                        <label for="{{ form.categoria.id_for_label }}" class="form-label small fw-semibold">
+                            Tipo de Solicitação (Categoria) <span class="text-danger">*</span>
+                        </label>
+                        {{ form.categoria }}
+                        {% if form.categoria.errors %}
+                            <div class="text-danger small mt-1">{{ form.categoria.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Descrição -->
+                    <div class="mb-3">
+                        <label for="{{ form.descricao.id_for_label }}" class="form-label small fw-semibold">
+                            Descrição da Demanda <span class="text-danger">*</span>
+                        </label>
+                        {{ form.descricao }}
+                        {% if form.descricao.errors %}
+                            <div class="text-danger small mt-1">{{ form.descricao.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Observação da Alteração (Auditoria) -->
+                    <div class="mb-3 p-3 bg-light rounded-3 border">
+                        <label for="{{ form.observacao_alteracao.id_for_label }}" class="form-label small fw-semibold text-primary">
+                            <i class="bi bi-chat-left-text me-1"></i>Observação sobre esta atualização (Ficará registrada no Histórico)
+                        </label>
+                        {{ form.observacao_alteracao }}
+                        <small class="text-muted">Ex: "Documentos conferidos e enviados para validação", "Aguardando comprovante do aluno", etc.</small>
+                    </div>
+
+                    <!-- Resultado Final -->
+                    <div class="mb-4">
+                        <label for="{{ form.resultado.id_for_label }}" class="form-label small fw-semibold">
+                            Resultado / Observação Final de Conclusão ou Cancelamento
+                        </label>
+                        {{ form.resultado }}
+                        {% if form.resultado.errors %}
+                            <div class="text-danger small mt-1">{{ form.resultado.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Botões de Ação -->
+                    <div class="d-flex justify-content-end gap-2 pt-3 border-top">
+                        <a href="{% url 'secretaria:detalhe_demanda' demanda.protocolo %}" class="btn btn-outline-secondary">
+                            Cancelar
+                        </a>
+                        <button type="submit" class="btn btn-primary px-4 fw-semibold">
+                            <i class="bi bi-check-circle me-1"></i>Salvar Alterações
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
