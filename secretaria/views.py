@@ -6,30 +6,16 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.forms import AuthenticationForm
 from django.contrib import messages
-from .models import Demanda, Categoria
+from .models import Demanda, Categoria, Historico
+from .forms import DemandaForm
 from .services import obter_indicadores_gestao, listar_demandas_filtradas, obter_dados_tela_inicial
 from .decorators import perfil_necessario
-
-
-@login_required
-def index_view(request):
-    """
-    Tela inicial do sistema com:
-    - Área de indicadores gerais
-    - Abas/Seções para Demandas Abertas, Atrasadas e Concluídas
-    """
-    dados = obter_dados_tela_inicial()
-    context = {
-        'dados': dados,
-        'perfil_usuario': getattr(request.user, 'perfil', None),
-    }
-    return render(request, 'secretaria/index.html', context)
 
 
 def login_view(request):
     """View de autenticação individual com usuário e senha."""
     if request.user.is_authenticated:
-        return redirect('secretaria:lista_demandas')
+        return redirect('secretaria:index')
 
     if request.method == 'POST':
         form = AuthenticationForm(request, data=request.POST)
@@ -47,7 +33,7 @@ def login_view(request):
             next_url = request.GET.get('next')
             if next_url:
                 return redirect(next_url)
-            return redirect('secretaria:lista_demandas')
+            return redirect('secretaria:index')
         else:
             messages.error(request, 'Usuário ou senha inválidos.')
     else:
@@ -61,6 +47,58 @@ def logout_view(request):
     logout(request)
     messages.info(request, 'Você encerrou sua sessão com segurança.')
     return redirect('secretaria:login')
+
+
+@login_required
+def index_view(request):
+    """
+    Tela inicial do sistema com:
+    - Área de indicadores gerais
+    - Abas/Seções para Demandas Abertas, Atrasadas e Concluídas
+    """
+    dados = obter_dados_tela_inicial()
+    context = {
+        'dados': dados,
+        'perfil_usuario': getattr(request.user, 'perfil', None),
+    }
+    return render(request, 'secretaria/index.html', context)
+
+
+@login_required
+def criar_demanda(request):
+    """
+    Formulário para registrar uma nova solicitação da secretaria.
+    Gera protocolo sequencial e histórico automático de entrada.
+    """
+    if request.method == 'POST':
+        form = DemandaForm(request.POST)
+        if form.is_valid():
+            demanda = form.save(commit=False)
+            demanda.status = 'RECEBIDA' if not demanda.responsavel else 'EM_ANDAMENTO'
+            demanda.save()
+
+            # Criação do primeiro registro de auditoria no histórico
+            Historico.objects.create(
+                demanda=demanda,
+                usuario=request.user,
+                etapa_anterior='',
+                nova_etapa=demanda.get_status_display(),
+                responsavel_anterior=None,
+                novo_responsavel=demanda.responsavel,
+                observacao=f"Demanda registrada por {request.user.get_full_name() or request.user.username}."
+            )
+
+            messages.success(
+                request,
+                f"Demanda registrada com sucesso! Protocolo gerado: {demanda.protocolo}"
+            )
+            return redirect('secretaria:detalhe_demanda', protocolo=demanda.protocolo)
+        else:
+            messages.error(request, 'Por favor, corrija os erros indicados no formulário.')
+    else:
+        form = DemandaForm()
+
+    return render(request, 'secretaria/form_demanda.html', {'form': form})
 
 
 @login_required

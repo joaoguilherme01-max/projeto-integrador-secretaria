@@ -206,7 +206,7 @@ class IndicadoresGestaoTestCase(TestCase):
         self.client.force_login(self.user)
         response = self.client.get(reverse('secretaria:dashboard'))
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, 'Painel de Indicadores')
+        self.assertContains(response, 'Painel Gerencial de Indicadores')
 
     def test_api_indicadores(self):
         PerfilUsuario.objects.get_or_create(user=self.user, defaults={'perfil': 'GESTOR'})
@@ -353,12 +353,12 @@ class AutenticacaoControleAcessoTestCase(TestCase):
 
     def test_login_sucesso_e_logout(self):
         """Testa login com credenciais válidas e posterior logout."""
-        # Login
+        # Login (redireciona para a tela inicial / index)
         response = self.client.post(reverse('secretaria:login'), {
             'username': 'atendente_user',
             'password': 'password123'
         })
-        self.assertRedirects(response, reverse('secretaria:lista_demandas'))
+        self.assertRedirects(response, reverse('secretaria:index'))
 
         # Logout
         response_logout = self.client.get(reverse('secretaria:logout'))
@@ -399,7 +399,7 @@ class AutenticacaoControleAcessoTestCase(TestCase):
         self.client.login(username='gestor_user', password='password123')
         response_gestor = self.client.get(reverse('secretaria:dashboard'))
         self.assertEqual(response_gestor.status_code, 200)
-        self.assertContains(response_gestor, 'Painel de Indicadores')
+        self.assertContains(response_gestor, 'Painel Gerencial de Indicadores')
         self.client.logout()
 
         # Teste com Administrador (acesso permitido)
@@ -455,3 +455,41 @@ class TelaInicialTestCase(TestCase):
         self.assertContains(response, self.dem_aberta.protocolo)
         self.assertContains(response, self.dem_atrasada.protocolo)
         self.assertContains(response, self.dem_concluida.protocolo)
+
+
+
+class CriacaoDemandaTestCase(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(username='atendente_form', password='123')
+        PerfilUsuario.objects.create(user=self.user, perfil='ATENDENTE')
+        self.categoria = Categoria.objects.create(nome='Declaração de Matrícula')
+
+    def test_get_formulario_criar_demanda(self):
+        self.client.force_login(self.user)
+        response = self.client.get(reverse('secretaria:criar_demanda'))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Registrar Nova Solicitação')
+        self.assertContains(response, 'Solicitante (Aluno/Responsável)')
+        self.assertContains(response, 'Tipo de Solicitação')
+
+    def test_post_criar_demanda_com_sucesso(self):
+        self.client.force_login(self.user)
+        dados = {
+            'solicitante': 'Mariana Rios',
+            'contato': '(11) 97777-8888',
+            'categoria': str(self.categoria.id),
+            'descricao': 'Precisa de declaração urgente para estágio.',
+            'prioridade': 'URGENTE',
+            'prazo': (timezone.now().date() + timedelta(days=1)).strftime('%Y-%m-%d'),
+            'responsavel': str(self.user.id),
+        }
+        response = self.client.post(reverse('secretaria:criar_demanda'), dados)
+        self.assertEqual(response.status_code, 302)
+
+        # Verifica se foi salva no banco
+        demanda = Demanda.objects.filter(solicitante='Mariana Rios').first()
+        self.assertIsNotNone(demanda)
+        self.assertTrue(demanda.protocolo.startswith('SEC-'))
+        self.assertEqual(demanda.prioridade, 'URGENTE')
+        self.assertEqual(demanda.responsavel, self.user)
+        self.assertEqual(demanda.historicos.count(), 1)

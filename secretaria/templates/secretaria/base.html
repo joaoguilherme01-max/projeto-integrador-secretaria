@@ -116,6 +116,11 @@
                                 <i class="bi bi-search me-1"></i>Consultar Demandas
                             </a>
                         </li>
+                        <li class="nav-item">
+                            <a class="nav-link {% if request.resolver_match.url_name == 'criar_demanda' %}active{% endif %}" href="{% url 'secretaria:criar_demanda' %}">
+                                <i class="bi bi-plus-circle me-1"></i>Nova Demanda
+                            </a>
+                        </li>
                         {% if request.user.is_superuser or request.user.perfil.perfil in 'ADMINISTRADOR,GESTOR' %}
                         <li class="nav-item">
                             <a class="nav-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}" href="{% url 'secretaria:dashboard' %}">

@@ -9,9 +9,12 @@
         <h4 class="fw-bold mb-1">Visão Geral das Demandas</h4>
         <p class="text-muted small mb-0">Acompanhe os principais indicadores e o andamento dos pedidos da secretaria em tempo real.</p>
     </div>
-    <div>
+    <div class="d-flex gap-2">
+        <a href="{% url 'secretaria:criar_demanda' %}" class="btn btn-success shadow-sm">
+            <i class="bi bi-plus-lg me-1"></i>Nova Solicitação
+        </a>
         <a href="{% url 'secretaria:lista_demandas' %}" class="btn btn-primary shadow-sm">
-            <i class="bi bi-filter-circle me-1"></i>Consultar com Filtros Avançados
+            <i class="bi bi-filter-circle me-1"></i>Buscar com Filtros
         </a>
     </div>
 </div>

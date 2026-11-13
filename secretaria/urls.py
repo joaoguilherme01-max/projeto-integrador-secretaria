@@ -11,6 +11,7 @@ urlpatterns = [
     # Páginas internas protegidas
     path('', views.index_view, name='index'),
     path('demandas/', views.lista_demandas, name='lista_demandas'),
+    path('demandas/nova/', views.criar_demanda, name='criar_demanda'),
     path('demandas/<str:protocolo>/', views.detalhe_demanda, name='detalhe_demanda'),
 
     # Painel restrito a Gestores e Administradores
