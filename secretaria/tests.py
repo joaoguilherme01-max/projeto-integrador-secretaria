@@ -902,13 +902,13 @@ class TransicaoEtapasChecklistTestCase(TestCase):
         """
         self.client.force_login(self.servidor)
         etapas = [
-            'RECEBIDA',
             'TRIAGEM',
             'AGUARDANDO_INFO',
             'EM_ANDAMENTO',
             'EM_VALIDACAO',
             'CONCLUIDA',
             'CANCELADA',
+            'RECEBIDA',
         ]
 
         for etapa in etapas:
@@ -921,6 +921,7 @@ class TransicaoEtapasChecklistTestCase(TestCase):
 
             # Verifica se gerou o histórico correspondente à transição
             ultimo_hist = self.demanda.historicos.first()
+            self.assertIsNotNone(ultimo_hist)
             self.assertEqual(ultimo_hist.nova_etapa, self.demanda.get_status_display())
             self.assertEqual(ultimo_hist.usuario, self.servidor)
 
