@@ -1,0 +1,209 @@
+{% extends 'secretaria/base.html' %}
+
+{% block title %}Quadro de Acompanhamento (Kanban) - Secretaria Escolar{% endblock %}
+
+{% block extra_head %}
+<style>
+    .kanban-board {
+        display: flex;
+        gap: 1rem;
+        overflow-x: auto;
+        padding-bottom: 1.5rem;
+        align-items: flex-start;
+    }
+
+    .kanban-column {
+        flex: 0 0 310px;
+        max-width: 310px;
+        background-color: #ebedf0;
+        border-radius: 10px;
+        display: flex;
+        flex-direction: column;
+        max-height: calc(100vh - 220px);
+    }
+
+    .kanban-header {
+        padding: 0.85rem 1rem;
+        font-weight: 600;
+        font-size: 0.9rem;
+        border-top-left-radius: 10px;
+        border-top-right-radius: 10px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background-color: #ffffff;
+        border-bottom: 2px solid transparent;
+    }
+
+    .kanban-cards-container {
+        padding: 0.75rem;
+        overflow-y: auto;
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+
+    /* Cartão individual da demanda */
+    .demanda-card {
+        background-color: #ffffff;
+        border-radius: 8px;
+        padding: 0.9rem;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+        border: 1px solid #dee2e6;
+        transition: transform 0.15s ease, box-shadow 0.15s ease;
+        text-decoration: none;
+        color: inherit;
+        display: block;
+    }
+
+    .demanda-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.12);
+        color: inherit;
+    }
+
+    .border-col-RECEBIDA { border-bottom-color: #6c757d; }
+    .border-col-TRIAGEM { border-bottom-color: #0dcaf0; }
+    .border-col-AGUARDANDO_INFO { border-bottom-color: #ffc107; }
+    .border-col-EM_ANDAMENTO { border-bottom-color: #0d6efd; }
+    .border-col-EM_VALIDACAO { border-bottom-color: #6f42c1; }
+    .border-col-CONCLUIDA { border-bottom-color: #198754; }
+    .border-col-CANCELADA { border-bottom-color: #212529; }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Cabeçalho do Quadro e Ações Rápidas -->
+<div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-3 gap-2">
+    <div>
+        <h4 class="fw-bold mb-1"><i class="bi bi-kanban me-2 text-primary"></i>Quadro de Acompanhamento de Demandas</h4>
+        <p class="text-muted small mb-0">Visão em cartões por status: acompanhe protocolo, categoria, prioridade, prazo e responsável em tempo real.</p>
+    </div>
+    <div class="d-flex gap-2">
+        <a href="{% url 'secretaria:criar_demanda' %}" class="btn btn-success btn-sm shadow-sm">
+            <i class="bi bi-plus-lg me-1"></i>Nova Demanda
+        </a>
+        <a href="{% url 'secretaria:lista_demandas' %}" class="btn btn-outline-primary btn-sm">
+            <i class="bi bi-list-ul me-1"></i>Visão em Lista
+        </a>
+    </div>
+</div>
+
+<!-- Barra de Filtros Rápida do Quadro -->
+<div class="card border-0 shadow-sm rounded-3 mb-4">
+    <div class="card-body py-2 px-3">
+        <form method="GET" action="{% url 'secretaria:quadro_kanban' %}" class="row g-2 align-items-center">
+            <div class="col-12 col-md-3">
+                <input type="text" name="busca" class="form-control form-control-sm" placeholder="Buscar protocolo ou solicitante..." value="{{ filtros.busca }}">
+            </div>
+            <div class="col-6 col-md-2">
+                <select name="categoria" class="form-select form-select-sm">
+                    <option value="">Todas as categorias</option>
+                    {% for cat in categorias %}
+                    <option value="{{ cat.id }}" {% if filtros.categoria == cat.id|stringformat:"s" %}selected{% endif %}>{{ cat.nome }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-6 col-md-2">
+                <select name="prioridade" class="form-select form-select-sm">
+                    <option value="">Todas prioridades</option>
+                    {% for val, label in prioridade_choices %}
+                    <option value="{{ val }}" {% if filtros.prioridade == val %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-6 col-md-3">
+                <select name="responsavel" class="form-select form-select-sm">
+                    <option value="">Todos os responsáveis</option>
+                    <option value="sem_responsavel" {% if filtros.responsavel == 'sem_responsavel' %}selected{% endif %}>[Não atribuído]</option>
+                    {% for user in responsaveis %}
+                    <option value="{{ user.id }}" {% if filtros.responsavel == user.id|stringformat:"s" %}selected{% endif %}>
+                        {{ user.get_full_name|default:user.username }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-6 col-md-2 d-flex gap-1">
+                <button type="submit" class="btn btn-primary btn-sm w-100"><i class="bi bi-funnel me-1"></i>Filtrar</button>
+                <a href="{% url 'secretaria:quadro_kanban' %}" class="btn btn-outline-secondary btn-sm" title="Limpar"><i class="bi bi-x-lg"></i></a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- QUADRO KANBAN (COLUNAS DE STATUS) -->
+<div class="kanban-board">
+    {% for col in colunas %}
+    <div class="kanban-column">
+        <!-- Cabeçalho da Coluna com o Status -->
+        <div class="kanban-header border-col-{{ col.status }}">
+            <span class="text-truncate">{{ col.titulo }}</span>
+            <span class="badge bg-secondary rounded-pill px-2 py-1">{{ col.total }}</span>
+        </div>
+
+        <!-- Lista de Cartões da Coluna -->
+        <div class="kanban-cards-container">
+            {% for dem in col.demandas %}
+            <a href="{% url 'secretaria:detalhe_demanda' dem.protocolo %}" class="demanda-card">
+                <!-- 1. Protocolo e 2. Status / Prioridade -->
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <span class="fw-bold text-primary font-monospace small">
+                        <i class="bi bi-hash"></i>{{ dem.protocolo }}
+                    </span>
+                    <!-- 3. Prioridade -->
+                    <span class="badge badge-prioridade-{{ dem.prioridade }} rounded-pill" style="font-size: 0.7rem;">
+                        {{ dem.get_prioridade_display }}
+                    </span>
+                </div>
+
+                <!-- Solicitante -->
+                <div class="fw-semibold text-dark text-truncate mb-1" title="{{ dem.solicitante }}">
+                    {{ dem.solicitante }}
+                </div>
+
+                <!-- 4. Tipo de Solicitação (Categoria) -->
+                <div class="small text-muted mb-2">
+                    <i class="bi bi-tag-fill me-1 text-secondary opacity-75"></i>{{ dem.categoria.nome }}
+                </div>
+
+                <!-- Linha Inferior: 5. Prazo e 6. Responsável -->
+                <div class="pt-2 border-top d-flex justify-content-between align-items-center small">
+                    <!-- Responsável -->
+                    <div class="text-truncate me-2" title="Responsável: {{ dem.responsavel.get_full_name|default:dem.responsavel.username|default:'Não atribuído' }}">
+                        {% if dem.responsavel %}
+                            <i class="bi bi-person-fill text-muted me-1"></i>
+                            <span class="text-secondary">{{ dem.responsavel.first_name|default:dem.responsavel.username }}</span>
+                        {% else %}
+                            <span class="badge bg-light text-danger border" style="font-size: 0.68rem;">Sem resp.</span>
+                        {% endif %}
+                    </div>
+
+                    <!-- Prazo -->
+                    <div>
+                        {% if dem.prazo %}
+                            {% if dem.status != 'CONCLUIDA' and dem.status != 'CANCELADA' and dem.prazo < hoje %}
+                                <span class="badge bg-danger text-white" title="Prazo vencido!">
+                                    <i class="bi bi-calendar-x me-1"></i>{{ dem.prazo|date:"d/m" }}
+                                </span>
+                            {% else %}
+                                <span class="text-muted" title="Prazo de entrega">
+                                    <i class="bi bi-calendar-check me-1"></i>{{ dem.prazo|date:"d/m" }}
+                                </span>
+                            {% endif %}
+                        {% else %}
+                            <span class="text-muted" style="font-size: 0.75rem;">Sem prazo</span>
+                        {% endif %}
+                    </div>
+                </div>
+            </a>
+            {% empty %}
+            <div class="text-center text-muted small py-4 opacity-75">
+                Nenhuma solicitação nesta etapa.
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}
+

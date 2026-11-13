@@ -6,9 +6,10 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.forms import AuthenticationForm
 from django.contrib import messages
+from django.utils import timezone
 from .models import Demanda, Categoria, Historico
 from .forms import DemandaForm
-from .services import obter_indicadores_gestao, listar_demandas_filtradas, obter_dados_tela_inicial
+from .services import obter_indicadores_gestao, listar_demandas_filtradas, obter_dados_tela_inicial, obter_quadro_kanban
 from .decorators import perfil_necessario
 
 
@@ -173,3 +174,36 @@ def api_indicadores(request):
     """
     indicadores = obter_indicadores_gestao()
     return JsonResponse(indicadores)
+
+
+
+@login_required
+def quadro_kanban(request):
+    """
+    Exibe as solicitações organizadas visualmente em quadro no modelo Kanban.
+    Permite filtrar o quadro por responsável, categoria, prioridade ou termo de busca.
+    Cada cartão exibe: protocolo, tipo de solicitação, prioridade, prazo, responsável e status.
+    """
+    filtros = {
+        'busca': request.GET.get('busca', ''),
+        'responsavel': request.GET.get('responsavel', ''),
+        'categoria': request.GET.get('categoria', ''),
+        'prioridade': request.GET.get('prioridade', ''),
+        'data_inicio': request.GET.get('data_inicio', ''),
+        'data_fim': request.GET.get('data_fim', ''),
+    }
+
+    colunas = obter_quadro_kanban(filtros)
+    categorias = Categoria.objects.filter(ativa=True).order_by('nome')
+    responsaveis = User.objects.filter(is_active=True).order_by('first_name', 'username')
+
+    context = {
+        'colunas': colunas,
+        'categorias': categorias,
+        'responsaveis': responsaveis,
+        'prioridade_choices': Demanda.PRIORIDADE_CHOICES,
+        'filtros': filtros,
+        'hoje': timezone.now().date(),
+        'perfil_usuario': getattr(request.user, 'perfil', None),
+    }
+    return render(request, 'secretaria/quadro_kanban.html', context)

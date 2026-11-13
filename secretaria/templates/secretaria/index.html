@@ -10,6 +10,9 @@
         <p class="text-muted small mb-0">Acompanhe os principais indicadores e o andamento dos pedidos da secretaria em tempo real.</p>
     </div>
     <div class="d-flex gap-2">
+        <a href="{% url 'secretaria:quadro_kanban' %}" class="btn btn-outline-primary shadow-sm">
+            <i class="bi bi-kanban me-1"></i>Ver no Quadro
+        </a>
         <a href="{% url 'secretaria:criar_demanda' %}" class="btn btn-success shadow-sm">
             <i class="bi bi-plus-lg me-1"></i>Nova Solicitação
         </a>

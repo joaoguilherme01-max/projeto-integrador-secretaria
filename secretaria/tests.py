@@ -493,3 +493,41 @@ class CriacaoDemandaTestCase(TestCase):
         self.assertEqual(demanda.prioridade, 'URGENTE')
         self.assertEqual(demanda.responsavel, self.user)
         self.assertEqual(demanda.historicos.count(), 1)
+
+
+
+class QuadroKanbanTestCase(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(username='kanban_user', password='123', first_name='Lucas')
+        PerfilUsuario.objects.create(user=self.user, perfil='ATENDENTE')
+        self.cat = Categoria.objects.create(nome='Declaração de Passe')
+
+        self.demanda = Demanda.objects.create(
+            categoria=self.cat,
+            solicitante='Carolina Castro',
+            contato='11988887777',
+            descricao='Passe estudantil urgente',
+            prioridade='ALTA',
+            status='EM_ANDAMENTO',
+            responsavel=self.user,
+            prazo=timezone.now().date() + timedelta(days=2)
+        )
+
+    def test_quadro_kanban_view_e_campos_do_cartao(self):
+        """Testa o carregamento do quadro e a presença dos campos obrigatórios no cartão."""
+        self.client.force_login(self.user)
+        response = self.client.get(reverse('secretaria:quadro_kanban'))
+        self.assertEqual(response.status_code, 200)
+
+        # 1. Protocolo
+        self.assertContains(response, self.demanda.protocolo)
+        # 2. Tipo de solicitação (categoria)
+        self.assertContains(response, 'Declaração de Passe')
+        # 3. Prioridade
+        self.assertContains(response, 'Alta')
+        # 4. Prazo
+        self.assertContains(response, self.demanda.prazo.strftime('%d/%m'))
+        # 5. Responsável
+        self.assertContains(response, 'Lucas')
+        # 6. Status (título da coluna do Kanban)
+        self.assertContains(response, 'Em Andamento')

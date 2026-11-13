@@ -222,3 +222,38 @@ def obter_dados_tela_inicial():
         'demandas_por_etapa': indicadores_completos['demandas_por_etapa'],
         'volume_por_categoria': indicadores_completos['volume_por_categoria'],
     }
+
+
+
+def obter_quadro_kanban(filtros=None):
+    """
+    Retorna a estrutura de colunas do quadro Kanban com as demandas
+    agrupadas por status, contendo todas as informações principais:
+    - protocolo
+    - tipo de solicitação (categoria)
+    - prioridade
+    - prazo
+    - responsável
+    - status
+    """
+    if filtros:
+        demandas_qs = listar_demandas_filtradas(filtros)
+    else:
+        demandas_qs = Demanda.objects.select_related('categoria', 'responsavel').all().order_by('-data_entrada')
+
+    # Agrupa as demandas em dicionário por status
+    demandas_por_status = {chave: [] for chave, _ in Demanda.STATUS_CHOICES}
+    for dem in demandas_qs:
+        if dem.status in demandas_por_status:
+            demandas_por_status[dem.status].append(dem)
+
+    colunas = []
+    for chave, rotulo in Demanda.STATUS_CHOICES:
+        colunas.append({
+            'status': chave,
+            'titulo': rotulo,
+            'demandas': demandas_por_status[chave],
+            'total': len(demandas_por_status[chave]),
+        })
+
+    return colunas
