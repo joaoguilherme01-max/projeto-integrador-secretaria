@@ -71,19 +71,64 @@
             padding: 1rem 0;
         }
 
-        /* BADGES SEMÂNTICAS */
-        .badge-prioridade-URGENTE { background-color: #dc3545; color: white; }
-        .badge-prioridade-ALTA { background-color: #fd7e14; color: white; }
-        .badge-prioridade-MEDIA { background-color: #ffc107; color: #212529; }
-        .badge-prioridade-BAIXA { background-color: #6c757d; color: white; }
+        /* BADGES SEMÂNTICAS COM ALTO CONTRASTE (WCAG AA/AAA) */
+        .badge-prioridade-URGENTE { background-color: #b02a37; color: #ffffff; }
+        .badge-prioridade-ALTA { background-color: #d63384; color: #ffffff; }
+        .badge-prioridade-MEDIA { background-color: #fd7e14; color: #ffffff; }
+        .badge-prioridade-BAIXA { background-color: #495057; color: #ffffff; }
 
-        .badge-status-RECEBIDA { background-color: #6c757d; }
-        .badge-status-TRIAGEM { background-color: #0dcaf0; color: #212529; }
-        .badge-status-AGUARDANDO_INFO { background-color: #ffc107; color: #212529; }
-        .badge-status-EM_ANDAMENTO { background-color: #0d6efd; }
-        .badge-status-EM_VALIDACAO { background-color: #6f42c1; }
-        .badge-status-CONCLUIDA { background-color: #198754; }
-        .badge-status-CANCELADA { background-color: #212529; }
+        .badge-status-RECEBIDA { background-color: #495057; color: #ffffff; }
+        .badge-status-TRIAGEM { background-color: #055160; color: #ffffff; }
+        .badge-status-AGUARDANDO_INFO { background-color: #664d03; color: #ffffff; }
+        .badge-status-EM_ANDAMENTO { background-color: #0b5ed7; color: #ffffff; }
+        .badge-status-EM_VALIDACAO { background-color: #59359a; color: #ffffff; }
+        .badge-status-CONCLUIDA { background-color: #146c43; color: #ffffff; }
+        .badge-status-CANCELADA { background-color: #212529; color: #ffffff; }
+
+        /* MELHORIAS DE TOUCH TARGET E ACESSIBILIDADE MOBILE */
+        .btn, .nav-link, .dropdown-item {
+            min-height: 40px;
+            display: inline-flex;
+            align-items: center;
+        }
+
+        /* LINKS COM FOCO VISÍVEL PARA NAVEGAÇÃO VIA TECLADO */
+        a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible {
+            outline: 3px solid #ffc107 !important;
+            outline-offset: 2px;
+        }
+
+        /* RESPONSIVIDADE PARA DISPOSITIVOS MÓVEIS (SMARTPHONES E TABLETS) */
+        @media (max-width: 991.98px) {
+            .navbar-collapse {
+                background-color: #0a4fb5;
+                padding: 1rem;
+                border-radius: 8px;
+                margin-top: 0.75rem;
+            }
+            .user-block-mobile {
+                padding-top: 0.75rem;
+                border-top: 1px solid rgba(255, 255, 255, 0.2);
+                margin-top: 0.75rem;
+                flex-direction: column;
+                align-items: flex-start !important;
+                gap: 0.75rem !important;
+            }
+            .user-block-mobile .btn {
+                width: 100%;
+                justify-content: center;
+            }
+        }
+
+        @media (max-width: 575.98px) {
+            .main-content {
+                padding: 1rem 0;
+            }
+            .container-fluid {
+                padding-left: 0.85rem !important;
+                padding-right: 0.85rem !important;
+            }
+        }
     </style>
     {% block extra_head %}{% endblock %}
 </head>
@@ -143,15 +188,15 @@
                     </ul>
 
                     <!-- Bloco do Usuário e Logout -->
-                    <div class="d-flex align-items-center gap-3">
+                    <div class="d-flex align-items-center gap-3 user-block-mobile">
                         <div class="text-white d-flex align-items-center">
                             <i class="bi bi-person-circle fs-5 me-2 text-white-50"></i>
                             <div class="lh-sm">
                                 <div class="fw-semibold small">{{ request.user.get_full_name|default:request.user.username }}</div>
                                 {% if request.user.perfil %}
-                                    <span class="badge bg-light text-primary" style="font-size: 0.7rem;">{{ request.user.perfil.get_perfil_display }}</span>
+                                    <span class="badge bg-light text-primary" style="font-size: 0.75rem;">{{ request.user.perfil.get_perfil_display }}</span>
                                 {% elif request.user.is_superuser %}
-                                    <span class="badge bg-warning text-dark" style="font-size: 0.7rem;">Administrador Master</span>
+                                    <span class="badge bg-warning text-dark" style="font-size: 0.75rem;">Administrador Master</span>
                                 {% endif %}
                             </div>
                         </div>
@@ -160,7 +205,7 @@
 
                         <a href="{% url 'secretaria:logout' %}" class="btn btn-sm btn-outline-light d-flex align-items-center gap-1" title="Encerrar sessão com segurança">
                             <i class="bi bi-box-arrow-right"></i>
-                            <span class="d-none d-md-inline">Sair</span>
+                            <span>Sair</span>
                         </a>
                     </div>
                 </div>
