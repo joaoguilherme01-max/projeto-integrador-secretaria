@@ -199,7 +199,11 @@
                                 <td class="fw-semibold">{{ dem.solicitante }}</td>
                                 <td>{{ dem.categoria.nome }}</td>
                                 <td>
-                                    {{ dem.responsavel.get_full_name|default:dem.responsavel.username|default:"Não atribuído" }}
+                                    {% if dem.responsavel %}
+                                        {{ dem.responsavel.get_full_name|default:dem.responsavel.username }}
+                                    {% else %}
+                                        Não atribuído
+                                    {% endif %}
                                 </td>
                                 <td>
                                     <span class="badge badge-prioridade-{{ dem.prioridade }} rounded-pill px-2 py-1">
@@ -257,7 +261,13 @@
                                 </td>
                                 <td class="fw-semibold">{{ dem.solicitante }}</td>
                                 <td>{{ dem.categoria.nome }}</td>
-                                <td>{{ dem.responsavel.get_full_name|default:dem.responsavel.username|default:"-" }}</td>
+                                <td>
+                                    {% if dem.responsavel %}
+                                        {{ dem.responsavel.get_full_name|default:dem.responsavel.username }}
+                                    {% else %}
+                                        -
+                                    {% endif %}
+                                </td>
                                 <td>{{ dem.data_entrada|date:"d/m/Y H:i" }}</td>
                                 <td class="text-success fw-medium">
                                     {{ dem.data_conclusao|date:"d/m/Y H:i"|default:"Concluída" }}
