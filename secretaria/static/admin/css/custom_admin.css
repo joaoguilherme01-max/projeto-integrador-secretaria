@@ -1,0 +1,251 @@
+/* Customização moderna do Django Admin - Secretaria Escolar */
+
+:root {
+    --primary: #0d6efd;
+    --secondary: #084298;
+    --accent: #0dcaf0;
+    --primary-fg: #ffffff;
+    
+    --header-color: #ffffff;
+    --header-bg: #0b5ed7;
+    --header-link-color: #f8f9fa;
+    
+    --breadcrumbs-fg: #6c757d;
+    --breadcrumbs-bg: #f8f9fa;
+    --breadcrumbs-link-fg: #0d6efd;
+    
+    --link-fg: #0d6efd;
+    --link-hover-color: #0a58ca;
+    --link-selected-fg: #084298;
+    
+    --button-fg: #ffffff;
+    --button-bg: #0d6efd;
+    --button-hover-bg: #0b5ed7;
+    
+    --default-button-bg: #198754;
+    --default-button-hover-bg: #157347;
+    
+    --close-button-bg: #6c757d;
+    --close-button-hover-bg: #5c636a;
+    
+    --delete-button-bg: #dc3545;
+    --delete-button-hover-bg: #bb2d3b;
+    
+    --body-bg: #f4f6f9;
+    --body-fg: #212529;
+}
+
+/* Barra Superior / Header */
+#header {
+    background: linear-gradient(135deg, #0d6efd 0%, #0a58ca 100%) !important;
+    color: #ffffff !important;
+    padding: 14px 30px !important;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1) !important;
+    border-bottom: 3px solid #ffc107 !important;
+}
+
+#header #branding h1 {
+    font-size: 1.35rem !important;
+    font-weight: 700 !important;
+    letter-spacing: -0.5px !important;
+    display: flex !important;
+    align-items: center !important;
+}
+
+#header #branding h1 a {
+    color: #ffffff !important;
+}
+
+#header #user-tools {
+    font-size: 0.9rem !important;
+    font-weight: 500 !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 12px !important;
+}
+
+#header #user-tools a {
+    color: #ffffff !important;
+    background: rgba(255, 255, 255, 0.15) !important;
+    padding: 5px 12px !important;
+    border-radius: 6px !important;
+    text-decoration: none !important;
+    transition: all 0.2s ease !important;
+}
+
+#header #user-tools a:hover {
+    background: rgba(255, 255, 255, 0.3) !important;
+    transform: translateY(-1px) !important;
+}
+
+/* Navegação e Breadcrumbs */
+div.breadcrumbs {
+    background: #ffffff !important;
+    border-bottom: 1px solid #dee2e6 !important;
+    padding: 12px 30px !important;
+    font-size: 0.85rem !important;
+    color: #6c757d !important;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.03) !important;
+}
+
+div.breadcrumbs a {
+    color: #0d6efd !important;
+    font-weight: 600 !important;
+}
+
+/* Módulos do Dashboard / Painel Principal */
+.dashboard .module {
+    background: #ffffff !important;
+    border-radius: 10px !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05) !important;
+    border: 1px solid #e9ecef !important;
+    margin-bottom: 25px !important;
+    overflow: hidden !important;
+}
+
+.dashboard .module table {
+    border: none !important;
+}
+
+.dashboard .module caption {
+    background: #f8f9fa !important;
+    color: #0b5ed7 !important;
+    font-size: 1.05rem !important;
+    font-weight: 700 !important;
+    padding: 12px 18px !important;
+    border-bottom: 2px solid #e9ecef !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.5px !important;
+}
+
+.dashboard .module th, .dashboard .module td {
+    padding: 12px 18px !important;
+    font-size: 0.95rem !important;
+    border-top: 1px solid #f1f3f5 !important;
+}
+
+/* Botões */
+.button, input[type=submit], input[type=button], .submit-row input, a.button {
+    background: #0d6efd !important;
+    color: #ffffff !important;
+    border-radius: 6px !important;
+    padding: 8px 18px !important;
+    border: none !important;
+    font-weight: 600 !important;
+    font-size: 0.85rem !important;
+    box-shadow: 0 2px 5px rgba(13, 110, 253, 0.25) !important;
+    transition: all 0.2s ease !important;
+    cursor: pointer !important;
+}
+
+.button:hover, input[type=submit]:hover, input[type=button]:hover, .submit-row input:hover {
+    background: #0b5ed7 !important;
+    transform: translateY(-1px) !important;
+    box-shadow: 0 4px 8px rgba(13, 110, 253, 0.35) !important;
+}
+
+.button.default, input[type=submit].default, .submit-row input.default {
+    background: #198754 !important;
+    box-shadow: 0 2px 5px rgba(25, 135, 84, 0.25) !important;
+}
+
+.button.default:hover, input[type=submit].default:hover, .submit-row input.default:hover {
+    background: #157347 !important;
+}
+
+/* Tabelas de Listagem (Change List) */
+#changelist {
+    background: transparent !important;
+}
+
+#changelist table {
+    background: #ffffff !important;
+    border-radius: 10px !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05) !important;
+    overflow: hidden !important;
+    border: 1px solid #e9ecef !important;
+}
+
+#changelist table thead th {
+    background: #f8f9fa !important;
+    color: #495057 !important;
+    font-weight: 700 !important;
+    text-transform: uppercase !important;
+    font-size: 0.75rem !important;
+    letter-spacing: 0.5px !important;
+    padding: 12px 15px !important;
+    border-bottom: 2px solid #dee2e6 !important;
+}
+
+#changelist table tbody tr:hover {
+    background-color: #f1f7ff !important;
+}
+
+#changelist table tbody td, #changelist table tbody th {
+    padding: 12px 15px !important;
+    vertical-align: middle !important;
+    border-top: 1px solid #f1f3f5 !important;
+}
+
+/* Filtros Laterais */
+#changelist-filter {
+    background: #ffffff !important;
+    border-radius: 10px !important;
+    border: 1px solid #e9ecef !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05) !important;
+    padding: 15px !important;
+}
+
+#changelist-filter h2 {
+    background: #0b5ed7 !important;
+    color: #ffffff !important;
+    border-radius: 6px !important;
+    padding: 8px 12px !important;
+    font-size: 0.85rem !important;
+    font-weight: 700 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.5px !important;
+}
+
+#changelist-filter li.selected a {
+    color: #0b5ed7 !important;
+    font-weight: 700 !important;
+}
+
+/* Formulários de Edição / Fieldsets */
+.form-row {
+    padding: 14px 18px !important;
+    border-bottom: 1px solid #f1f3f5 !important;
+}
+
+fieldset {
+    background: #ffffff !important;
+    border-radius: 10px !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05) !important;
+    border: 1px solid #e9ecef !important;
+    margin-bottom: 25px !important;
+    overflow: hidden !important;
+}
+
+fieldset h2 {
+    background: #f8f9fa !important;
+    color: #0b5ed7 !important;
+    font-weight: 700 !important;
+    padding: 10px 18px !important;
+    border-bottom: 2px solid #e9ecef !important;
+    font-size: 0.95rem !important;
+}
+
+input[type=text], input[type=password], input[type=email], input[type=url], input[type=number], select, textarea {
+    border-radius: 6px !important;
+    border: 1px solid #ced4da !important;
+    padding: 8px 12px !important;
+    font-size: 0.9rem !important;
+    transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out !important;
+}
+
+input[type=text]:focus, select:focus, textarea:focus {
+    border-color: #86b7fe !important;
+    outline: 0 !important;
+    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25) !important;
+}
