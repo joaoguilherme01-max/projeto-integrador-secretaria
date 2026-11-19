@@ -88,7 +88,7 @@ DATABASES = {
 }
 
 # Se houver DATABASE_URL definida no ambiente (PostgreSQL no Vercel/Neon/Supabase/Render)
-if os.environ.get('DATABASE_URL'):
+if os.environ.get('DATABASE_URL') and dj_database_url:
     DATABASES['default'] = dj_database_url.config(
         default=os.environ.get('DATABASE_URL'),
         conn_max_age=600,
